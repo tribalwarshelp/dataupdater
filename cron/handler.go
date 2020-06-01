@@ -32,7 +32,7 @@ func Attach(c *cron.Cron, db *pg.DB) error {
 		return err
 	}
 
-	if _, err := c.AddFunc("@every 1h", h.updateData); err != nil {
+	if _, err := c.AddFunc("@every 10m", h.updateData); err != nil {
 		return err
 	}
 
@@ -159,7 +159,6 @@ func (h *handler) updateData() {
 		log.Println(err.Error())
 		return
 	}
-	var mutex sync.Mutex
 	var wg sync.WaitGroup
 	max := runtime.NumCPU() * 5
 	count := 0
@@ -177,9 +176,7 @@ func (h *handler) updateData() {
 			db:      h.db.WithParam("SERVER", pg.Safe(server.Key)),
 			baseURL: url,
 		}
-		mutex.Lock()
 		count++
-		mutex.Unlock()
 		log.Println("COUNT", count)
 		go func(server *models.Server, sh *serverHandler) {
 			wg.Add(1)
