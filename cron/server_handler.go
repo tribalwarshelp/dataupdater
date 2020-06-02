@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
-	"twcron/models"
+
+	"github.com/tribalwarshelp/twcron/models"
 
 	"github.com/go-pg/pg/v10"
 	"github.com/go-pg/pg/v10/orm"

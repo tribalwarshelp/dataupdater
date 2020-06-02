@@ -1,4 +1,4 @@
-module twcron
+module github.com/tribalwarshelp/twcron
 
 go 1.14
 

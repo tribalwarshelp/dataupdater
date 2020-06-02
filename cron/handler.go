@@ -7,7 +7,8 @@ import (
 	"net/http"
 	"runtime"
 	"sync"
-	"twcron/models"
+
+	"github.com/tribalwarshelp/twcron/models"
 
 	phpserialize "github.com/Kichiyaki/go-php-serialize"
 	"github.com/robfig/cron/v3"
@@ -27,15 +28,13 @@ type handler struct {
 
 func Attach(c *cron.Cron, db *pg.DB) error {
 	h := &handler{db}
-
 	if err := h.init(); err != nil {
 		return err
 	}
 
-	if _, err := c.AddFunc("@every 10m", h.updateData); err != nil {
+	if _, err := c.AddFunc("@every 1h", h.updateData); err != nil {
 		return err
 	}
-
 	go h.updateData()
 
 	return nil
@@ -103,24 +102,24 @@ func (h *handler) getServers() ([]*models.Server, map[string]string, error) {
 	for _, version := range versions {
 		resp, err := http.Get(fmt.Sprintf("https://%s%s", version.Host, endpointGetServers))
 		if err != nil {
-			log.Print(errors.Wrap(err, fmt.Sprintf("Cannot fetch servers from %s", version.Host)))
+			log.Print(errors.Wrapf(err, "Cannot fetch servers from %s", version.Host))
 			continue
 		}
 		defer resp.Body.Close()
 		bodyBytes, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			log.Print(errors.Wrap(err, fmt.Sprintf("Cannot read response body from %s", version.Host)))
+			log.Print(errors.Wrapf(err, "Cannot read response body from %s", version.Host))
 			continue
 		}
 		body, err := phpserialize.Decode(string(bodyBytes))
 		if err != nil {
-			log.Print(errors.Wrap(err, fmt.Sprintf("Cannot serialize body from %s into go value", version.Host)))
+			log.Print(errors.Wrapf(err, "Cannot serialize body from %s into go value", version.Host))
 			continue
 		}
 		for serverKey, url := range body.(map[interface{}]interface{}) {
 			serverKeyStr := serverKey.(string)
 			if err := h.createSchema(serverKeyStr); err != nil {
-				log.Print(errors.Wrap(err, fmt.Sprintf("Cannot create schema for %s", serverKey)))
+				log.Print(errors.Wrapf(err, "Cannot create schema for %s", serverKey))
 				continue
 			}
 			serverKeys = append(serverKeys, serverKeyStr)
