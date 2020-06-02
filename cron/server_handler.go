@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"strconv"
 
-	"github.com/tribalwarshelp/twcron/models"
+	"github.com/tribalwarshelp/shared/models"
 
 	"github.com/go-pg/pg/v10"
 	"github.com/go-pg/pg/v10/orm"
@@ -311,71 +311,79 @@ func (h *serverHandler) updateData() error {
 	if err != nil {
 		return err
 	}
-	if _, err := tx.Model(&tribes).
-		OnConflict("(id) DO UPDATE").
-		Set("name = EXCLUDED.name").
-		Set("tag = EXCLUDED.tag").
-		Set("total_members = EXCLUDED.total_members").
-		Set("total_villages = EXCLUDED.total_villages").
-		Set("points = EXCLUDED.points").
-		Set("rank = EXCLUDED.rank").
-		Set("exist = EXCLUDED.exist").
-		Apply(attachODSetClauses).
-		Insert(); err != nil {
-		return errors.Wrap(err, "cannot insert tribes")
-	}
-	if _, err := tx.Model(&players).
-		OnConflict("(id) DO UPDATE").
-		Set("name = EXCLUDED.name").
-		Set("total_villages = EXCLUDED.total_villages").
-		Set("points = EXCLUDED.points").
-		Set("rank = EXCLUDED.rank").
-		Set("exist = EXCLUDED.exist").
-		Set("tribe_id = EXCLUDED.tribe_id").
-		Apply(attachODSetClauses).
-		Insert(); err != nil {
-		return errors.Wrap(err, "cannot insert players")
-	}
-	if _, err := tx.Model(&villages).
-		OnConflict("(id) DO UPDATE").
-		Set("name = EXCLUDED.name").
-		Set("points = EXCLUDED.points").
-		Set("x = EXCLUDED.x").
-		Set("y = EXCLUDED.y").
-		Set("bonus = EXCLUDED.bonus").
-		Set("player_id = EXCLUDED.player_id").
-		Insert(); err != nil {
-		return errors.Wrap(err, "cannot insert villages")
-	}
+	if len(tribes) > 0 {
+		if _, err := tx.Model(&tribes).
+			OnConflict("(id) DO UPDATE").
+			Set("name = EXCLUDED.name").
+			Set("tag = EXCLUDED.tag").
+			Set("total_members = EXCLUDED.total_members").
+			Set("total_villages = EXCLUDED.total_villages").
+			Set("points = EXCLUDED.points").
+			Set("rank = EXCLUDED.rank").
+			Set("exist = EXCLUDED.exist").
+			Apply(attachODSetClauses).
+			Insert(); err != nil {
+			return errors.Wrap(err, "cannot insert tribes")
+		}
 
-	ids := []int{}
-	for _, tribe := range tribes {
-		ids = append(ids, tribe.ID)
+		ids := []int{}
+		for _, tribe := range tribes {
+			ids = append(ids, tribe.ID)
+		}
+		if _, err := tx.Model(&models.Tribe{}).
+			Where("id NOT IN (?)", pg.In(ids)).
+			Set("exist = false").
+			Update(); err != nil && err != pg.ErrNoRows {
+			return errors.Wrap(err, "cannot update not existed tribes")
+		}
 	}
-	if _, err := tx.Model(&models.Tribe{}).
-		Where("id NOT IN (?)", pg.In(ids)).
-		Set("exist = false").
-		Update(); err != nil {
-		return fmt.Errorf("cannot update not existed tribes")
+	if len(players) > 0 {
+		if _, err := tx.Model(&players).
+			OnConflict("(id) DO UPDATE").
+			Set("name = EXCLUDED.name").
+			Set("total_villages = EXCLUDED.total_villages").
+			Set("points = EXCLUDED.points").
+			Set("rank = EXCLUDED.rank").
+			Set("exist = EXCLUDED.exist").
+			Set("tribe_id = EXCLUDED.tribe_id").
+			Apply(attachODSetClauses).
+			Insert(); err != nil {
+			return errors.Wrap(err, "cannot insert players")
+		}
+
+		ids := []int{}
+		for _, player := range players {
+			ids = append(ids, player.ID)
+		}
+		if _, err := tx.Model(&models.Player{}).
+			Where("id NOT IN (?)", pg.In(ids)).
+			Set("exist = false").
+			Update(); err != nil && err != pg.ErrNoRows {
+			return errors.Wrap(err, "cannot update not existed players")
+		}
 	}
-	ids = []int{}
-	for _, player := range players {
-		ids = append(ids, player.ID)
-	}
-	if _, err := tx.Model(&models.Player{}).
-		Where("id NOT IN (?)", pg.In(ids)).
-		Set("exist = false").
-		Update(); err != nil {
-		return fmt.Errorf("cannot update not existed players")
-	}
-	ids = []int{}
-	for _, village := range villages {
-		ids = append(ids, village.ID)
-	}
-	if _, err := tx.Model(&models.Village{}).
-		Where("id NOT IN (?)", pg.In(ids)).
-		Delete(); err != nil {
-		return fmt.Errorf("cannot delete not existed villages")
+	if len(villages) > 0 {
+		if _, err := tx.Model(&villages).
+			OnConflict("(id) DO UPDATE").
+			Set("name = EXCLUDED.name").
+			Set("points = EXCLUDED.points").
+			Set("x = EXCLUDED.x").
+			Set("y = EXCLUDED.y").
+			Set("bonus = EXCLUDED.bonus").
+			Set("player_id = EXCLUDED.player_id").
+			Insert(); err != nil {
+			return errors.Wrap(err, "cannot insert villages")
+		}
+
+		ids := []int{}
+		for _, village := range villages {
+			ids = append(ids, village.ID)
+		}
+		if _, err := tx.Model(&models.Village{}).
+			Where("id NOT IN (?)", pg.In(ids)).
+			Delete(); err != nil && err != pg.ErrNoRows {
+			return errors.Wrap(err, "cannot delete not existed villages")
+		}
 	}
 
 	return tx.Commit()

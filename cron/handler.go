@@ -8,7 +8,7 @@ import (
 	"runtime"
 	"sync"
 
-	"github.com/tribalwarshelp/twcron/models"
+	"github.com/tribalwarshelp/shared/models"
 
 	phpserialize "github.com/Kichiyaki/go-php-serialize"
 	"github.com/robfig/cron/v3"
@@ -176,11 +176,10 @@ func (h *handler) updateData() {
 			baseURL: url,
 		}
 		count++
-		log.Println("COUNT", count)
 		go func(server *models.Server, sh *serverHandler) {
 			wg.Add(1)
 			if err := sh.updateData(); err != nil {
-				log.Println(err.Error())
+				log.Println(errors.Wrap(err, server.Key))
 			} else {
 				log.Printf("%s updated", server.Key)
 			}

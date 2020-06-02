@@ -6,8 +6,9 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/tribalwarshelp/shared/mode"
+
 	_cron "github.com/tribalwarshelp/twcron/cron"
-	"github.com/tribalwarshelp/twcron/mode"
 
 	"github.com/go-pg/pg/v10"
 	"github.com/joho/godotenv"
