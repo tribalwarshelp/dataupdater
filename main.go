@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/tribalwarshelp/shared/mode"
 
@@ -26,11 +25,10 @@ func init() {
 
 func main() {
 	db := pg.Connect(&pg.Options{
-		User:        os.Getenv("DB_USER"),
-		Password:    os.Getenv("DB_PASSWORD"),
-		Database:    os.Getenv("DB_NAME"),
-		Addr:        os.Getenv("DB_HOST") + ":" + os.Getenv("DB_PORT"),
-		PoolTimeout: 1 * time.Minute,
+		User:     os.Getenv("DB_USER"),
+		Password: os.Getenv("DB_PASSWORD"),
+		Database: os.Getenv("DB_NAME"),
+		Addr:     os.Getenv("DB_HOST") + ":" + os.Getenv("DB_PORT"),
 	})
 	defer func() {
 		if err := db.Close(); err != nil {

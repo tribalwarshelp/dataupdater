@@ -146,7 +146,7 @@ func (h *handler) getServers() ([]*models.Server, map[string]string, error) {
 	}
 
 	if _, err := h.db.Model(&models.Server{}).
-		Set("status = ?", models.ServerStatusClose).
+		Set("status = ?", models.ServerStatusClosed).
 		Where("key NOT IN (?)", pg.In(serverKeys)).
 		Update(); err != nil {
 		return nil, nil, err
