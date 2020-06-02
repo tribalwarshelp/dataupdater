@@ -311,6 +311,8 @@ func (h *serverHandler) updateData() error {
 	if err != nil {
 		return err
 	}
+	defer tx.Close()
+
 	if len(tribes) > 0 {
 		if _, err := tx.Model(&tribes).
 			OnConflict("(id) DO UPDATE").

@@ -45,6 +45,8 @@ func (h *handler) init() error {
 	if err != nil {
 		return err
 	}
+	defer tx.Close()
+
 	models := []interface{}{
 		(*models.LangVersion)(nil),
 		(*models.Server)(nil),
@@ -67,6 +69,7 @@ func (h *handler) createSchema(key string) error {
 	if err != nil {
 		return err
 	}
+	defer tx.Close()
 
 	if _, err := tx.Exec(fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s", key)); err != nil {
 		return err
@@ -158,9 +161,11 @@ func (h *handler) updateData() {
 		log.Println(err.Error())
 		return
 	}
+
 	var wg sync.WaitGroup
 	max := runtime.NumCPU() * 5
 	count := 0
+
 	for _, server := range servers {
 		url, ok := urls[server.Key]
 		if !ok {
@@ -176,15 +181,17 @@ func (h *handler) updateData() {
 			baseURL: url,
 		}
 		count++
+		wg.Add(1)
 		go func(server *models.Server, sh *serverHandler) {
-			wg.Add(1)
+			defer wg.Done()
+			log.Printf("%s: Updating", server.Key)
 			if err := sh.updateData(); err != nil {
 				log.Println(errors.Wrap(err, server.Key))
 			} else {
-				log.Printf("%s updated", server.Key)
+				log.Printf("%s: updated", server.Key)
 			}
-			wg.Done()
 		}(server, sh)
 	}
+
 	wg.Wait()
 }
