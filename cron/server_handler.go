@@ -321,6 +321,7 @@ func (h *serverHandler) updateData() error {
 			Set("total_members = EXCLUDED.total_members").
 			Set("total_villages = EXCLUDED.total_villages").
 			Set("points = EXCLUDED.points").
+			Set("all_points = EXCLUDED.all_points").
 			Set("rank = EXCLUDED.rank").
 			Set("exist = EXCLUDED.exist").
 			Apply(attachODSetClauses).
