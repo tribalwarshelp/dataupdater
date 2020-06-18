@@ -19,7 +19,7 @@ func uncompressAndGetCsvLines(r io.Reader) ([][]string, error) {
 func getCSVData(url string, compressed bool) ([][]string, error) {
 	resp, err := http.Get(url)
 	if err != nil {
-		return [][]string{}, nil
+		return nil, err
 	}
 	defer resp.Body.Close()
 	if !compressed {

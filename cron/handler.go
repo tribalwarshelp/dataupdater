@@ -169,23 +169,23 @@ func (h *handler) updateData() {
 	for _, server := range servers {
 		url, ok := urls[server.Key]
 		if !ok {
-			log.Printf("No one URL associated with key: %s in a map, skipping...", server.Key)
+			log.Printf("No one URL associated with key: %s, skipping...", server.Key)
 			continue
 		}
 		if count >= max {
 			wg.Wait()
 			count = 0
 		}
-		sh := &serverHandler{
+		sh := &updateServerDataHandler{
 			db:      h.db.WithParam("SERVER", pg.Safe(server.Key)),
 			baseURL: url,
 		}
 		count++
 		wg.Add(1)
-		go func(server *models.Server, sh *serverHandler) {
+		go func(server *models.Server, sh *updateServerDataHandler) {
 			defer wg.Done()
 			log.Printf("%s: Updating", server.Key)
-			if err := sh.updateData(); err != nil {
+			if err := sh.update(); err != nil {
 				log.Println(errors.Wrap(err, server.Key))
 			} else {
 				log.Printf("%s: updated", server.Key)

@@ -25,7 +25,7 @@ const (
 	endpointKillAllTribe = "/map/kill_all_tribe.txt"
 )
 
-type serverHandler struct {
+type updateServerDataHandler struct {
 	baseURL string
 	db      *pg.DB
 }
@@ -36,7 +36,7 @@ type parsedODLine struct {
 	Score int
 }
 
-func (h *serverHandler) parseODLine(line []string) (*parsedODLine, error) {
+func (h *updateServerDataHandler) parseODLine(line []string) (*parsedODLine, error) {
 	if len(line) != 3 {
 		return nil, fmt.Errorf("Invalid line format (should be rank,id,score)")
 	}
@@ -57,7 +57,7 @@ func (h *serverHandler) parseODLine(line []string) (*parsedODLine, error) {
 	return p, nil
 }
 
-func (h *serverHandler) getOD(tribe bool) (map[int]*models.OpponentsDefeated, error) {
+func (h *updateServerDataHandler) getOD(tribe bool) (map[int]*models.OpponentsDefeated, error) {
 	m := make(map[int]*models.OpponentsDefeated)
 	urls := []string{
 		fmt.Sprintf("%s%s", h.baseURL, endpointKillAll),
@@ -70,6 +70,7 @@ func (h *serverHandler) getOD(tribe bool) (map[int]*models.OpponentsDefeated, er
 			fmt.Sprintf("%s%s", h.baseURL, endpointKillAllTribe),
 			fmt.Sprintf("%s%s", h.baseURL, endpointKillAttTribe),
 			fmt.Sprintf("%s%s", h.baseURL, endpointKillDefTribe),
+			"",
 		}
 	}
 	for _, url := range urls {
@@ -85,16 +86,17 @@ func (h *serverHandler) getOD(tribe bool) (map[int]*models.OpponentsDefeated, er
 			if _, ok := m[parsed.ID]; !ok {
 				m[parsed.ID] = &models.OpponentsDefeated{}
 			}
-			if url == urls[0] {
+			switch url {
+			case urls[0]:
 				m[parsed.ID].RankTotal = parsed.Rank
 				m[parsed.ID].ScoreTotal = parsed.Score
-			} else if url == urls[1] {
+			case urls[1]:
 				m[parsed.ID].RankAtt = parsed.Rank
 				m[parsed.ID].ScoreAtt = parsed.Score
-			} else if url == urls[2] {
+			case urls[2]:
 				m[parsed.ID].RankDef = parsed.Rank
 				m[parsed.ID].ScoreDef = parsed.Score
-			} else if !tribe && url == urls[3] {
+			case urls[3]:
 				m[parsed.ID].RankSup = parsed.Rank
 				m[parsed.ID].ScoreSup = parsed.Score
 			}
@@ -103,7 +105,7 @@ func (h *serverHandler) getOD(tribe bool) (map[int]*models.OpponentsDefeated, er
 	return m, nil
 }
 
-func (h *serverHandler) parsePlayerLine(line []string) (*models.Player, error) {
+func (h *updateServerDataHandler) parsePlayerLine(line []string) (*models.Player, error) {
 	if len(line) != 6 {
 		return nil, fmt.Errorf("Invalid line format (should be id,name,tribeid,villages,points,rank)")
 	}
@@ -141,7 +143,7 @@ func (h *serverHandler) parsePlayerLine(line []string) (*models.Player, error) {
 	return player, nil
 }
 
-func (h *serverHandler) getPlayers(od map[int]*models.OpponentsDefeated) ([]*models.Player, error) {
+func (h *updateServerDataHandler) getPlayers(od map[int]*models.OpponentsDefeated) ([]*models.Player, error) {
 	url := h.baseURL + endpointPlayers
 	lines, err := getCSVData(url, false)
 	if err != nil {
@@ -164,7 +166,7 @@ func (h *serverHandler) getPlayers(od map[int]*models.OpponentsDefeated) ([]*mod
 	return players, nil
 }
 
-func (h *serverHandler) parseTribeLine(line []string) (*models.Tribe, error) {
+func (h *updateServerDataHandler) parseTribeLine(line []string) (*models.Tribe, error) {
 	if len(line) != 8 {
 		return nil, fmt.Errorf("Invalid line format (should be id,name,tag,members,villages,points,allpoints,rank)")
 	}
@@ -210,7 +212,7 @@ func (h *serverHandler) parseTribeLine(line []string) (*models.Tribe, error) {
 	return tribe, nil
 }
 
-func (h *serverHandler) getTribes(od map[int]*models.OpponentsDefeated) ([]*models.Tribe, error) {
+func (h *updateServerDataHandler) getTribes(od map[int]*models.OpponentsDefeated) ([]*models.Tribe, error) {
 	url := h.baseURL + endpointTribe
 	lines, err := getCSVData(url, false)
 	if err != nil {
@@ -231,7 +233,7 @@ func (h *serverHandler) getTribes(od map[int]*models.OpponentsDefeated) ([]*mode
 	return tribes, nil
 }
 
-func (h *serverHandler) parseVillageLine(line []string) (*models.Village, error) {
+func (h *updateServerDataHandler) parseVillageLine(line []string) (*models.Village, error) {
 	if len(line) != 7 {
 		return nil, fmt.Errorf("Invalid line format (should be id,name,x,y,playerID,points,bonus)")
 	}
@@ -268,7 +270,7 @@ func (h *serverHandler) parseVillageLine(line []string) (*models.Village, error)
 	return village, nil
 }
 
-func (h *serverHandler) getVillages() ([]*models.Village, error) {
+func (h *updateServerDataHandler) getVillages() ([]*models.Village, error) {
 	url := h.baseURL + endpointVillage
 	lines, err := getCSVData(url, false)
 	if err != nil {
@@ -285,7 +287,7 @@ func (h *serverHandler) getVillages() ([]*models.Village, error) {
 	return villages, nil
 }
 
-func (h *serverHandler) updateData() error {
+func (h *updateServerDataHandler) update() error {
 	pod, err := h.getOD(false)
 	if err != nil {
 		return err
