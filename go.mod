@@ -8,6 +8,6 @@ require (
 	github.com/joho/godotenv v1.3.0
 	github.com/pkg/errors v0.9.1
 	github.com/robfig/cron/v3 v3.0.1
-	github.com/tribalwarshelp/shared v0.0.0-20200602122915-bb9a531672b6
+	github.com/tribalwarshelp/shared v0.0.0-20200618150949-896cd6c98d06
 	golang.org/x/net v0.0.0-20200528225125-3c3fba18258b // indirect
 )

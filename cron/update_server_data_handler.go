@@ -74,6 +74,9 @@ func (h *updateServerDataHandler) getOD(tribe bool) (map[int]*models.OpponentsDe
 		}
 	}
 	for _, url := range urls {
+		if url == "" {
+			continue
+		}
 		lines, err := getCSVData(url, false)
 		if err != nil {
 			return nil, errors.Wrapf(err, "unable to get data, url %s", url)
