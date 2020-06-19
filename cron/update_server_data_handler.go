@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
+	"time"
 
 	"github.com/tribalwarshelp/shared/models"
 
@@ -13,21 +14,25 @@ import (
 )
 
 const (
-	endpointPlayers      = "/map/player.txt"
-	endpointTribe        = "/map/ally.txt"
-	endpointVillage      = "/map/village.txt"
-	endpointKillAtt      = "/map/kill_att.txt"
-	endpointKillDef      = "/map/kill_def.txt"
-	endpointKillSup      = "/map/kill_sup.txt"
-	endpointKillAll      = "/map/kill_all.txt"
-	endpointKillAttTribe = "/map/kill_att_tribe.txt"
-	endpointKillDefTribe = "/map/kill_def_tribe.txt"
-	endpointKillAllTribe = "/map/kill_all_tribe.txt"
+	endpointConfig         = "/interface.php?func=get_config"
+	endpointUnitConfig     = "/interface.php?func=get_unit_info"
+	endpointBuildingConfig = "/interface.php?func=get_building_info"
+	endpointPlayers        = "/map/player.txt"
+	endpointTribe          = "/map/ally.txt"
+	endpointVillage        = "/map/village.txt"
+	endpointKillAtt        = "/map/kill_att.txt"
+	endpointKillDef        = "/map/kill_def.txt"
+	endpointKillSup        = "/map/kill_sup.txt"
+	endpointKillAll        = "/map/kill_all.txt"
+	endpointKillAttTribe   = "/map/kill_att_tribe.txt"
+	endpointKillDefTribe   = "/map/kill_def_tribe.txt"
+	endpointKillAllTribe   = "/map/kill_all_tribe.txt"
 )
 
 type updateServerDataHandler struct {
 	baseURL string
 	db      *pg.DB
+	server  *models.Server
 }
 
 type parsedODLine struct {
@@ -290,6 +295,36 @@ func (h *updateServerDataHandler) getVillages() ([]*models.Village, error) {
 	return villages, nil
 }
 
+func (h *updateServerDataHandler) getConfig() (*models.Config, error) {
+	url := h.baseURL + endpointConfig
+	cfg := &models.Config{}
+	err := getXML(url, cfg)
+	if err != nil {
+		return nil, errors.Wrap(err, "getConfig")
+	}
+	return cfg, nil
+}
+
+func (h *updateServerDataHandler) getBuildingConfig() (*models.BuildingConfig, error) {
+	url := h.baseURL + endpointBuildingConfig
+	cfg := &models.BuildingConfig{}
+	err := getXML(url, cfg)
+	if err != nil {
+		return nil, errors.Wrap(err, "getBuildingConfig")
+	}
+	return cfg, nil
+}
+
+func (h *updateServerDataHandler) getUnitConfig() (*models.UnitConfig, error) {
+	url := h.baseURL + endpointUnitConfig
+	cfg := &models.UnitConfig{}
+	err := getXML(url, cfg)
+	if err != nil {
+		return nil, errors.Wrap(err, "getUnitConfig")
+	}
+	return cfg, nil
+}
+
 func (h *updateServerDataHandler) update() error {
 	pod, err := h.getOD(false)
 	if err != nil {
@@ -308,6 +343,18 @@ func (h *updateServerDataHandler) update() error {
 		return err
 	}
 	villages, err := h.getVillages()
+	if err != nil {
+		return err
+	}
+	cfg, err := h.getConfig()
+	if err != nil {
+		return err
+	}
+	buildingCfg, err := h.getBuildingConfig()
+	if err != nil {
+		return err
+	}
+	unitCfg, err := h.getUnitConfig()
 	if err != nil {
 		return err
 	}
@@ -392,6 +439,14 @@ func (h *updateServerDataHandler) update() error {
 			Delete(); err != nil && err != pg.ErrNoRows {
 			return errors.Wrap(err, "cannot delete not existed villages")
 		}
+	}
+
+	h.server.Config = *cfg
+	h.server.UnitConfig = *unitCfg
+	h.server.BuildingConfig = *buildingCfg
+	h.server.DataUpdatedAt = time.Now()
+	if err := tx.Update(h.server); err != nil {
+		return errors.Wrap(err, "cannot update server")
 	}
 
 	return tx.Commit()

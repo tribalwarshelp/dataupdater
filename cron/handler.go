@@ -179,16 +179,18 @@ func (h *handler) updateData() {
 		sh := &updateServerDataHandler{
 			db:      h.db.WithParam("SERVER", pg.Safe(server.Key)),
 			baseURL: url,
+			server:  server,
 		}
 		count++
 		wg.Add(1)
 		go func(server *models.Server, sh *updateServerDataHandler) {
 			defer wg.Done()
-			log.Printf("%s: Updating", server.Key)
+			log.Printf("%s: updating data", server.Key)
 			if err := sh.update(); err != nil {
 				log.Println(errors.Wrap(err, server.Key))
+				return
 			} else {
-				log.Printf("%s: updated", server.Key)
+				log.Printf("%s: data updated", server.Key)
 			}
 		}(server, sh)
 	}
