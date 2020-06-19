@@ -295,9 +295,9 @@ func (h *updateServerDataHandler) getVillages() ([]*models.Village, error) {
 	return villages, nil
 }
 
-func (h *updateServerDataHandler) getConfig() (*models.Config, error) {
+func (h *updateServerDataHandler) getConfig() (*models.ServerConfig, error) {
 	url := h.baseURL + endpointConfig
-	cfg := &models.Config{}
+	cfg := &models.ServerConfig{}
 	err := getXML(url, cfg)
 	if err != nil {
 		return nil, errors.Wrap(err, "getConfig")
