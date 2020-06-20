@@ -27,6 +27,7 @@ const (
 	endpointKillAttTribe   = "/map/kill_att_tribe.txt"
 	endpointKillDefTribe   = "/map/kill_def_tribe.txt"
 	endpointKillAllTribe   = "/map/kill_all_tribe.txt"
+	endpointConquer        = "/map/conquer.txt"
 )
 
 type updateServerDataHandler struct {
@@ -295,6 +296,62 @@ func (h *updateServerDataHandler) getVillages() ([]*models.Village, error) {
 	return villages, nil
 }
 
+func (h *updateServerDataHandler) parseEnnoblementLine(line []string) (*models.Ennoblement, error) {
+	if len(line) != 4 {
+		return nil, fmt.Errorf("Invalid line format (should be village_id,timestamp,new_owner_id,old_owner_id)")
+	}
+	var err error
+	ennoblement := &models.Ennoblement{}
+	ennoblement.VillageID, err = strconv.Atoi(line[0])
+	if err != nil {
+		return nil, errors.Wrap(err, "ennoblement.VillageID")
+	}
+	timestamp, err := strconv.Atoi(line[1])
+	if err != nil {
+		return nil, errors.Wrap(err, "timestamp")
+	}
+	ennoblement.EnnobledAt = time.Unix(int64(timestamp), 0)
+	ennoblement.NewOwnerID, err = strconv.Atoi(line[2])
+	if err != nil {
+		return nil, errors.Wrap(err, "ennoblement.NewOwnerID")
+	}
+	ennoblement.OldOwnerID, err = strconv.Atoi(line[3])
+	if err != nil {
+		return nil, errors.Wrap(err, "ennoblement.OldOwnerID")
+	}
+
+	return ennoblement, nil
+}
+
+func (h *updateServerDataHandler) getEnnoblements() ([]*models.Ennoblement, error) {
+	url := h.baseURL + endpointConquer
+	lines, err := getCSVData(url, false)
+	if err != nil {
+		return nil, errors.Wrapf(err, "unable to get data, url %s", url)
+	}
+
+	lastEnnoblement := &models.Ennoblement{}
+	if err := h.db.
+		Model(lastEnnoblement).
+		Limit(1).
+		Order("ennobled_at DESC").
+		Select(); err != nil && err != pg.ErrNoRows {
+		return nil, errors.Wrapf(err, "cannot load last ennoblement, url %s", url)
+	}
+
+	ennoblements := []*models.Ennoblement{}
+	for _, line := range lines {
+		ennoblement, err := h.parseEnnoblementLine(line)
+		if err != nil {
+			return nil, errors.Wrapf(err, "cannot parse line, url %s", url)
+		}
+		if ennoblement.EnnobledAt.After(lastEnnoblement.EnnobledAt) {
+			ennoblements = append(ennoblements, ennoblement)
+		}
+	}
+	return ennoblements, nil
+}
+
 func (h *updateServerDataHandler) getConfig() (*models.ServerConfig, error) {
 	url := h.baseURL + endpointConfig
 	cfg := &models.ServerConfig{}
@@ -355,6 +412,10 @@ func (h *updateServerDataHandler) update() error {
 		return err
 	}
 	unitCfg, err := h.getUnitConfig()
+	if err != nil {
+		return err
+	}
+	ennoblements, err := h.getEnnoblements()
 	if err != nil {
 		return err
 	}
@@ -440,12 +501,20 @@ func (h *updateServerDataHandler) update() error {
 			return errors.Wrap(err, "cannot delete not existed villages")
 		}
 	}
+	if len(ennoblements) > 0 {
+		if _, err := tx.Model(&ennoblements).Insert(); err != nil {
+			return errors.Wrap(err, "cannot insert ennoblements")
+		}
+	}
 
-	h.server.Config = *cfg
-	h.server.UnitConfig = *unitCfg
-	h.server.BuildingConfig = *buildingCfg
-	h.server.DataUpdatedAt = time.Now()
-	if err := tx.Update(h.server); err != nil {
+	if _, err := tx.Model(h.server).
+		Set("data_updated_at = ?", time.Now()).
+		Set("unit_config = ?", unitCfg).
+		Set("building_config = ?", buildingCfg).
+		Set("config = ?", cfg).
+		Returning("*").
+		WherePK().
+		Update(); err != nil {
 		return errors.Wrap(err, "cannot update server")
 	}
 

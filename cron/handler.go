@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"runtime"
 	"sync"
+	"time"
 
 	"github.com/tribalwarshelp/shared/models"
 
@@ -20,6 +21,60 @@ import (
 
 const (
 	endpointGetServers = "/backend/get_servers.php"
+	serverPGFunctions  = `
+		CREATE OR REPLACE FUNCTION ?0.log_tribe_change()
+			RETURNS trigger AS
+		$BODY$
+		BEGIN
+			IF NEW.tribe_id <> OLD.tribe_id THEN
+				INSERT INTO ?0.tribe_changes(player_id,old_tribe_id,new_tribe_id,created_at)
+				VALUES(OLD.id,OLD.tribe_id,NEW.tribe_id,now());
+			END IF;
+
+			RETURN NEW;
+		END;
+		$BODY$
+		LANGUAGE plpgsql VOLATILE;
+		CREATE OR REPLACE FUNCTION ?0.get_old_and_new_owner_tribe_id()
+			RETURNS trigger AS
+		$BODY$
+		BEGIN
+			IF NEW.old_owner_id <> 0 THEN
+				SELECT tribe_id INTO NEW.old_owner_tribe_id
+					FROM ?0.players
+					WHERE id = NEW.old_owner_id;
+			END IF;
+			IF NEW.old_owner_tribe_id IS NULL THEN
+				NEW.old_owner_tribe_id = 0;
+			END IF;
+			IF NEW.new_owner_id <> 0 THEN
+				SELECT tribe_id INTO NEW.new_owner_tribe_id
+					FROM ?0.players
+					WHERE id = NEW.new_owner_id;
+			END IF;
+			IF NEW.new_owner_tribe_id IS NULL THEN
+				NEW.new_owner_tribe_id = 0;
+			END IF;
+
+			RETURN NEW;
+		END;
+		$BODY$
+		LANGUAGE plpgsql VOLATILE;
+	`
+	serverPGTriggers = `
+		DROP TRIGGER IF EXISTS ?0_tribe_changes ON ?0.players;
+		CREATE TRIGGER ?0_tribe_changes
+			AFTER UPDATE
+			ON ?0.players
+			FOR EACH ROW
+			EXECUTE PROCEDURE ?0.log_tribe_change();
+		DROP TRIGGER IF EXISTS ?0_update_ennoblement_old_and_new_owner_tribe_id ON ?0.ennoblements;
+		CREATE TRIGGER ?0_update_ennoblement_old_and_new_owner_tribe_id
+			BEFORE INSERT
+			ON ?0.ennoblements
+			FOR EACH ROW
+			EXECUTE PROCEDURE ?0.get_old_and_new_owner_tribe_id();
+	`
 )
 
 type handler struct {
@@ -32,10 +87,20 @@ func Attach(c *cron.Cron, db *pg.DB) error {
 		return err
 	}
 
-	if _, err := c.AddFunc("@every 1h", h.updateData); err != nil {
+	if _, err := c.AddFunc("0 * * * *", h.updateServersData); err != nil {
 		return err
 	}
-	go h.updateData()
+	if _, err := c.AddFunc("30 0 * * *", h.updateServersHistory); err != nil {
+		return err
+	}
+	if _, err := c.AddFunc("30 1 * * *", h.updateStats); err != nil {
+		return err
+	}
+	go func() {
+		h.updateServersData()
+		h.updateServersHistory()
+		h.updateStats()
+	}()
 
 	return nil
 }
@@ -79,6 +144,11 @@ func (h *handler) createSchema(key string) error {
 		(*models.Tribe)(nil),
 		(*models.Player)(nil),
 		(*models.Village)(nil),
+		(*models.Ennoblement)(nil),
+		(*models.ServerStats)(nil),
+		(*models.TribeHistory)(nil),
+		(*models.PlayerHistory)(nil),
+		(*models.TribeChange)(nil),
 	}
 
 	for _, model := range models {
@@ -86,6 +156,15 @@ func (h *handler) createSchema(key string) error {
 			IfNotExists: true,
 		})
 		if err != nil {
+			return err
+		}
+	}
+
+	for _, statement := range []string{
+		serverPGFunctions,
+		serverPGTriggers,
+	} {
+		if _, err := tx.Exec(statement, pg.Safe(key)); err != nil {
 			return err
 		}
 	}
@@ -136,13 +215,15 @@ func (h *handler) getServers() ([]*models.Server, map[string]string, error) {
 		}
 	}
 
-	if _, err := h.db.Model(&servers).
-		OnConflict("(key) DO UPDATE").
-		Set("status = ?", models.ServerStatusOpen).
-		Set("lang_version_tag = EXCLUDED.lang_version_tag").
-		Returning("*").
-		Insert(); err != nil {
-		return nil, nil, err
+	if len(servers) > 0 {
+		if _, err := h.db.Model(&servers).
+			OnConflict("(key) DO UPDATE").
+			Set("status = ?", models.ServerStatusOpen).
+			Set("lang_version_tag = EXCLUDED.lang_version_tag").
+			Returning("*").
+			Insert(); err != nil {
+			return nil, nil, err
+		}
 	}
 
 	if _, err := h.db.Model(&models.Server{}).
@@ -155,7 +236,7 @@ func (h *handler) getServers() ([]*models.Server, map[string]string, error) {
 	return servers, urls, nil
 }
 
-func (h *handler) updateData() {
+func (h *handler) updateServersData() {
 	servers, urls, err := h.getServers()
 	if err != nil {
 		log.Println(err.Error())
@@ -196,4 +277,97 @@ func (h *handler) updateData() {
 	}
 
 	wg.Wait()
+}
+
+func (h *handler) updateServersHistory() {
+	servers := []*models.Server{}
+	now := time.Now()
+	t1 := time.Date(now.Year(), now.Month(), now.Day(), 0, 30, 0, 0, time.UTC)
+	err := h.db.
+		Model(&servers).
+		Where("status = ? AND (history_updated_at < ? OR history_updated_at IS NULL)", models.ServerStatusOpen, t1).
+		Select()
+	if err != nil {
+		log.Println(errors.Wrap(err, "updateServersHistory"))
+		return
+	}
+
+	var wg sync.WaitGroup
+	max := runtime.NumCPU() * 5
+	count := 0
+
+	for _, server := range servers {
+		if count >= max {
+			wg.Wait()
+			count = 0
+		}
+		sh := &updateServerHistoryHandler{
+			db:     h.db.WithParam("SERVER", pg.Safe(server.Key)),
+			server: server,
+		}
+		count++
+		wg.Add(1)
+		go func(server *models.Server, sh *updateServerHistoryHandler) {
+			defer wg.Done()
+			log.Printf("%s: updating history", server.Key)
+			if err := sh.update(); err != nil {
+				log.Println(errors.Wrap(err, server.Key))
+				return
+			} else {
+				log.Printf("%s: history updated", server.Key)
+			}
+		}(server, sh)
+	}
+
+	wg.Wait()
+}
+
+func (h *handler) updateServersStats(t time.Time) error {
+	servers := []*models.Server{}
+	err := h.db.
+		Model(&servers).
+		Where("status = ? AND (stats_updated_at < ? OR stats_updated_at IS NULL)", models.ServerStatusOpen, t).
+		Select()
+	if err != nil {
+		return errors.Wrap(err, "updateServersStats")
+	}
+
+	var wg sync.WaitGroup
+	max := runtime.NumCPU() * 5
+	count := 0
+
+	for _, server := range servers {
+		if count >= max {
+			wg.Wait()
+			count = 0
+		}
+		sh := &updateServerStatsHandler{
+			db:     h.db.WithParam("SERVER", pg.Safe(server.Key)),
+			server: server,
+		}
+		count++
+		wg.Add(1)
+		go func(server *models.Server, sh *updateServerStatsHandler) {
+			defer wg.Done()
+			log.Printf("%s: updating stats", server.Key)
+			if err := sh.update(); err != nil {
+				log.Println(errors.Wrap(err, server.Key))
+				return
+			} else {
+				log.Printf("%s: stats updated", server.Key)
+			}
+		}(server, sh)
+	}
+
+	wg.Wait()
+	return nil
+}
+
+func (h *handler) updateStats() {
+	now := time.Now()
+	t1 := time.Date(now.Year(), now.Month(), now.Day(), 1, 30, 0, 0, time.UTC)
+	if err := h.updateServersStats(t1); err != nil {
+		log.Println(err)
+		return
+	}
 }
