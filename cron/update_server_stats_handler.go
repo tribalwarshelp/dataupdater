@@ -34,7 +34,7 @@ func (h *updateServerStatsHandler) prepare() (*models.ServerStats, error) {
 	}
 	tribes := activeTribes + inactiveTribes
 
-	barbarianVillages, err := h.db.Model(&models.Village{}).Where("player_id = 0 AND bonus = 0").Count()
+	barbarianVillages, err := h.db.Model(&models.Village{}).Where("player_id = 0").Count()
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot count barbarian villages")
 	}

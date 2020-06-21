@@ -399,7 +399,7 @@ func (h *updateServerDataHandler) update() error {
 	}
 	numberOfVillages := len(villages)
 
-	tribes, err := h.getTribes(tod, numberOfVillages)
+	tribes, err := h.getTribes(tod, countPlayerVillages(villages))
 	if err != nil {
 		return err
 	}

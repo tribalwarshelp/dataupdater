@@ -7,6 +7,8 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+
+	"github.com/tribalwarshelp/shared/models"
 )
 
 func uncompressAndGetCsvLines(r io.Reader) ([][]string, error) {
@@ -42,4 +44,14 @@ func getXML(url string, decode interface{}) error {
 		return err
 	}
 	return xml.Unmarshal(bytes, decode)
+}
+
+func countPlayerVillages(villages []*models.Village) int {
+	count := 0
+	for _, village := range villages {
+		if village.PlayerID != 0 {
+			count++
+		}
+	}
+	return count
 }
