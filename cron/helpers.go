@@ -7,9 +7,14 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"time"
 
 	"github.com/tribalwarshelp/shared/models"
 )
+
+var client = &http.Client{
+	Timeout: 20 * time.Second,
+}
 
 func uncompressAndGetCsvLines(r io.Reader) ([][]string, error) {
 	uncompressedStream, err := gzip.NewReader(r)
@@ -21,7 +26,7 @@ func uncompressAndGetCsvLines(r io.Reader) ([][]string, error) {
 }
 
 func getCSVData(url string, compressed bool) ([][]string, error) {
-	resp, err := http.Get(url)
+	resp, err := client.Get(url)
 	if err != nil {
 		return nil, err
 	}
@@ -33,7 +38,7 @@ func getCSVData(url string, compressed bool) ([][]string, error) {
 }
 
 func getXML(url string, decode interface{}) error {
-	resp, err := http.Get(url)
+	resp, err := client.Get(url)
 	if err != nil {
 		return err
 	}
