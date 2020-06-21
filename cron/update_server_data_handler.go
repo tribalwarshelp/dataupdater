@@ -175,7 +175,7 @@ func (h *updateServerDataHandler) getPlayers(od map[int]*models.OpponentsDefeate
 	return players, nil
 }
 
-func (h *updateServerDataHandler) parseTribeLine(line []string) (*models.Tribe, error) {
+func (h *updateServerDataHandler) parseTribeLine(line []string, numberOfVillages int) (*models.Tribe, error) {
 	if len(line) != 8 {
 		return nil, fmt.Errorf("Invalid line format (should be id,name,tag,members,villages,points,allpoints,rank)")
 	}
@@ -217,11 +217,12 @@ func (h *updateServerDataHandler) parseTribeLine(line []string) (*models.Tribe, 
 	if err != nil {
 		return nil, errors.Wrap(err, "tribe.Rank")
 	}
+	tribe.Dominance = float64(tribe.TotalVillages) / float64(numberOfVillages)
 
 	return tribe, nil
 }
 
-func (h *updateServerDataHandler) getTribes(od map[int]*models.OpponentsDefeated) ([]*models.Tribe, error) {
+func (h *updateServerDataHandler) getTribes(od map[int]*models.OpponentsDefeated, numberOfVillages int) ([]*models.Tribe, error) {
 	url := h.baseURL + endpointTribe
 	lines, err := getCSVData(url, false)
 	if err != nil {
@@ -229,7 +230,7 @@ func (h *updateServerDataHandler) getTribes(od map[int]*models.OpponentsDefeated
 	}
 	tribes := []*models.Tribe{}
 	for _, line := range lines {
-		tribe, err := h.parseTribeLine(line)
+		tribe, err := h.parseTribeLine(line, numberOfVillages)
 		if err != nil {
 			return nil, errors.Wrapf(err, "unable to parse line, url %s", url)
 		}
@@ -391,18 +392,25 @@ func (h *updateServerDataHandler) update() error {
 	if err != nil {
 		return err
 	}
-	tribes, err := h.getTribes(tod)
-	if err != nil {
-		return err
-	}
-	players, err := h.getPlayers(pod)
-	if err != nil {
-		return err
-	}
+
 	villages, err := h.getVillages()
 	if err != nil {
 		return err
 	}
+	numberOfVillages := len(villages)
+
+	tribes, err := h.getTribes(tod, numberOfVillages)
+	if err != nil {
+		return err
+	}
+	numberOfTribes := len(tribes)
+
+	players, err := h.getPlayers(pod)
+	if err != nil {
+		return err
+	}
+	numberOfPlayers := len(players)
+
 	cfg, err := h.getConfig()
 	if err != nil {
 		return err
@@ -415,6 +423,7 @@ func (h *updateServerDataHandler) update() error {
 	if err != nil {
 		return err
 	}
+
 	ennoblements, err := h.getEnnoblements()
 	if err != nil {
 		return err
@@ -437,6 +446,7 @@ func (h *updateServerDataHandler) update() error {
 			Set("all_points = EXCLUDED.all_points").
 			Set("rank = EXCLUDED.rank").
 			Set("exist = EXCLUDED.exist").
+			Set("dominance = EXCLUDED.dominance").
 			Apply(attachODSetClauses).
 			Insert(); err != nil {
 			return errors.Wrap(err, "cannot insert tribes")
@@ -512,6 +522,9 @@ func (h *updateServerDataHandler) update() error {
 		Set("unit_config = ?", unitCfg).
 		Set("building_config = ?", buildingCfg).
 		Set("config = ?", cfg).
+		Set("number_of_players = ?", numberOfPlayers).
+		Set("number_of_tribes = ?", numberOfTribes).
+		Set("number_of_villages = ?", numberOfVillages).
 		Returning("*").
 		WherePK().
 		Update(); err != nil {

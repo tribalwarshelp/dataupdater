@@ -106,6 +106,12 @@ github.com/tribalwarshelp/shared v0.0.0-20200620153121-bcad77573c9d h1:nyDzPccg/
 github.com/tribalwarshelp/shared v0.0.0-20200620153121-bcad77573c9d/go.mod h1:tf+2yTHasV6jAF3V2deZ9slNoCyBzC0fMdTjI7clf6Y=
 github.com/tribalwarshelp/shared v0.0.0-20200620172120-2529c050265b h1:uYxRxhuIXIcPLU3/MoKOkOn8/vOKMkM06XHxeEkIebQ=
 github.com/tribalwarshelp/shared v0.0.0-20200620172120-2529c050265b/go.mod h1:tf+2yTHasV6jAF3V2deZ9slNoCyBzC0fMdTjI7clf6Y=
+github.com/tribalwarshelp/shared v0.0.0-20200621075847-011aa011b979 h1:uiPBr8HQD+rtznz76CuZijQ7bwQ+UsTSTImzlowRBpI=
+github.com/tribalwarshelp/shared v0.0.0-20200621075847-011aa011b979/go.mod h1:tf+2yTHasV6jAF3V2deZ9slNoCyBzC0fMdTjI7clf6Y=
+github.com/tribalwarshelp/shared v0.0.0-20200621081952-6f187361307e h1:DgRPTSQkydANgYLyHRh4S3sAsGcQkmAHRNVdtwYYyBE=
+github.com/tribalwarshelp/shared v0.0.0-20200621081952-6f187361307e/go.mod h1:tf+2yTHasV6jAF3V2deZ9slNoCyBzC0fMdTjI7clf6Y=
+github.com/tribalwarshelp/shared v0.0.0-20200621083628-e0fdaa9bdff6 h1:HjOXWkYjCl9cs6Jd0VUByJEPKE8TXVz6CHB88f8wPXk=
+github.com/tribalwarshelp/shared v0.0.0-20200621083628-e0fdaa9bdff6/go.mod h1:tf+2yTHasV6jAF3V2deZ9slNoCyBzC0fMdTjI7clf6Y=
 github.com/vmihailenco/bufpool v0.1.5/go.mod h1:fL9i/PRTuS7AELqAHwSU1Zf1c70xhkhGe/cD5ud9pJk=
 github.com/vmihailenco/bufpool v0.1.11 h1:gOq2WmBrq0i2yW5QJ16ykccQ4wH9UyEsgLm6czKAd94=
 github.com/vmihailenco/bufpool v0.1.11/go.mod h1:AFf/MOy3l2CFTKbxwt0mp2MwnqjNEs5H/UxrkA5jxTQ=

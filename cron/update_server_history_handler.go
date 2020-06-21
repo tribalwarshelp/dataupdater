@@ -44,6 +44,7 @@ func (h *updateServerHistoryHandler) update() error {
 			Points:            tribe.Points,
 			AllPoints:         tribe.AllPoints,
 			Rank:              tribe.Rank,
+			Dominance:         tribe.Dominance,
 		})
 	}
 
