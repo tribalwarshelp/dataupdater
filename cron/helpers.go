@@ -16,7 +16,7 @@ var client = &http.Client{
 	Timeout: 20 * time.Second,
 }
 
-func uncompressAndGetCsvLines(r io.Reader) ([][]string, error) {
+func uncompressAndReadCsvLines(r io.Reader) ([][]string, error) {
 	uncompressedStream, err := gzip.NewReader(r)
 	if err != nil {
 		return [][]string{}, err
@@ -34,7 +34,7 @@ func getCSVData(url string, compressed bool) ([][]string, error) {
 	if !compressed {
 		return csv.NewReader(resp.Body).ReadAll()
 	}
-	return uncompressAndGetCsvLines(resp.Body)
+	return uncompressAndReadCsvLines(resp.Body)
 }
 
 func getXML(url string, decode interface{}) error {

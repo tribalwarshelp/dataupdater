@@ -113,8 +113,9 @@ func (h *handler) init() error {
 	defer tx.Close()
 
 	models := []interface{}{
-		(*models.LangVersion)(nil),
+		(*models.SpecialServer)(nil),
 		(*models.Server)(nil),
+		(*models.LangVersion)(nil),
 	}
 
 	for _, model := range models {
@@ -173,33 +174,36 @@ func (h *handler) createSchema(key string) error {
 }
 
 func (h *handler) getServers() ([]*models.Server, map[string]string, error) {
-	versions := []*models.LangVersion{}
-	if err := h.db.Model(&versions).Select(); err != nil {
+	langVersions := []*models.LangVersion{}
+	if err := h.db.Model(&langVersions).Relation("SpecialServers").Select(); err != nil {
 		return nil, nil, errors.Wrap(err, "getServers")
 	}
 
 	serverKeys := []string{}
 	servers := []*models.Server{}
 	urls := make(map[string]string)
-	for _, version := range versions {
-		resp, err := http.Get(fmt.Sprintf("https://%s%s", version.Host, endpointGetServers))
+	for _, langVersion := range langVersions {
+		resp, err := http.Get(fmt.Sprintf("https://%s%s", langVersion.Host, endpointGetServers))
 		if err != nil {
-			log.Print(errors.Wrapf(err, "Cannot fetch servers from %s", version.Host))
+			log.Print(errors.Wrapf(err, "Cannot fetch servers from %s", langVersion.Host))
 			continue
 		}
 		defer resp.Body.Close()
 		bodyBytes, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			log.Print(errors.Wrapf(err, "Cannot read response body from %s", version.Host))
+			log.Print(errors.Wrapf(err, "Cannot read response body from %s", langVersion.Host))
 			continue
 		}
 		body, err := phpserialize.Decode(string(bodyBytes))
 		if err != nil {
-			log.Print(errors.Wrapf(err, "Cannot serialize body from %s into go value", version.Host))
+			log.Print(errors.Wrapf(err, "Cannot serialize body from %s into go value", langVersion.Host))
 			continue
 		}
 		for serverKey, url := range body.(map[interface{}]interface{}) {
 			serverKeyStr := serverKey.(string)
+			if langVersion.SpecialServers.Contains(serverKeyStr) {
+				continue
+			}
 			if err := h.createSchema(serverKeyStr); err != nil {
 				log.Print(errors.Wrapf(err, "Cannot create schema for %s", serverKey))
 				continue
@@ -209,8 +213,8 @@ func (h *handler) getServers() ([]*models.Server, map[string]string, error) {
 			servers = append(servers, &models.Server{
 				Key:            serverKeyStr,
 				Status:         models.ServerStatusOpen,
-				LangVersionTag: version.Tag,
-				LangVersion:    version,
+				LangVersionTag: langVersion.Tag,
+				LangVersion:    langVersion,
 			})
 		}
 	}
