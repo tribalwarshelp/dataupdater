@@ -152,12 +152,14 @@ func (h *updateServerDataHandler) parsePlayerLine(line []string) (*models.Player
 	return player, nil
 }
 
-func (h *updateServerDataHandler) getPlayers(od map[int]*models.OpponentsDefeated) ([]*models.Player, error) {
+func (h *updateServerDataHandler) getPlayers(od map[int]*models.OpponentsDefeated,
+	firstEnnoblementByID map[int]*models.Ennoblement) ([]*models.Player, error) {
 	url := h.baseURL + endpointPlayers
 	lines, err := getCSVData(url, false)
 	if err != nil {
 		return nil, errors.Wrapf(err, "unable to get data, url %s", url)
 	}
+	now := time.Now()
 
 	players := []*models.Player{}
 	for _, line := range lines {
@@ -169,13 +171,18 @@ func (h *updateServerDataHandler) getPlayers(od map[int]*models.OpponentsDefeate
 		if ok {
 			player.OpponentsDefeated = *playerOD
 		}
+		firstEnnoblement, ok := firstEnnoblementByID[player.ID]
+		if ok {
+			diffInDays := getDateDifferenceInDays(now, firstEnnoblement.EnnobledAt)
+			player.DailyGrowth = calcPlayerDailyGrowth(diffInDays, player.Points)
+		}
 		players = append(players, player)
 	}
 
 	return players, nil
 }
 
-func (h *updateServerDataHandler) parseTribeLine(line []string, numberOfVillages int) (*models.Tribe, error) {
+func (h *updateServerDataHandler) parseTribeLine(line []string) (*models.Tribe, error) {
 	if len(line) != 8 {
 		return nil, fmt.Errorf("Invalid line format (should be id,name,tag,members,villages,points,allpoints,rank)")
 	}
@@ -217,7 +224,6 @@ func (h *updateServerDataHandler) parseTribeLine(line []string, numberOfVillages
 	if err != nil {
 		return nil, errors.Wrap(err, "tribe.Rank")
 	}
-	tribe.Dominance = float64(tribe.TotalVillages) / float64(numberOfVillages)
 
 	return tribe, nil
 }
@@ -230,7 +236,7 @@ func (h *updateServerDataHandler) getTribes(od map[int]*models.OpponentsDefeated
 	}
 	tribes := []*models.Tribe{}
 	for _, line := range lines {
-		tribe, err := h.parseTribeLine(line, numberOfVillages)
+		tribe, err := h.parseTribeLine(line)
 		if err != nil {
 			return nil, errors.Wrapf(err, "unable to parse line, url %s", url)
 		}
@@ -238,6 +244,7 @@ func (h *updateServerDataHandler) getTribes(od map[int]*models.OpponentsDefeated
 		if ok {
 			tribe.OpponentsDefeated = *tribeOD
 		}
+		tribe.Dominance = float64(tribe.TotalVillages) / float64(numberOfVillages)
 		tribes = append(tribes, tribe)
 	}
 	return tribes, nil
@@ -324,11 +331,11 @@ func (h *updateServerDataHandler) parseEnnoblementLine(line []string) (*models.E
 	return ennoblement, nil
 }
 
-func (h *updateServerDataHandler) getEnnoblements() ([]*models.Ennoblement, error) {
+func (h *updateServerDataHandler) getEnnoblements() ([]*models.Ennoblement, map[int]*models.Ennoblement, error) {
 	url := h.baseURL + endpointConquer
 	lines, err := getCSVData(url, false)
 	if err != nil {
-		return nil, errors.Wrapf(err, "unable to get data, url %s", url)
+		return nil, nil, errors.Wrapf(err, "unable to get data, url %s", url)
 	}
 
 	lastEnnoblement := &models.Ennoblement{}
@@ -337,20 +344,25 @@ func (h *updateServerDataHandler) getEnnoblements() ([]*models.Ennoblement, erro
 		Limit(1).
 		Order("ennobled_at DESC").
 		Select(); err != nil && err != pg.ErrNoRows {
-		return nil, errors.Wrapf(err, "cannot load last ennoblement, url %s", url)
+		return nil, nil, errors.Wrapf(err, "cannot load last ennoblement, url %s", url)
 	}
 
+	firstEnnoblementByID := make(map[int]*models.Ennoblement)
 	ennoblements := []*models.Ennoblement{}
 	for _, line := range lines {
 		ennoblement, err := h.parseEnnoblementLine(line)
 		if err != nil {
-			return nil, errors.Wrapf(err, "cannot parse line, url %s", url)
+			return nil, nil, errors.Wrapf(err, "cannot parse line, url %s", url)
+		}
+		if otherEnnoblement, ok := firstEnnoblementByID[ennoblement.NewOwnerID]; !ok ||
+			otherEnnoblement.EnnobledAt.After(ennoblement.EnnobledAt) {
+			firstEnnoblementByID[ennoblement.NewOwnerID] = ennoblement
 		}
 		if ennoblement.EnnobledAt.After(lastEnnoblement.EnnobledAt) {
 			ennoblements = append(ennoblements, ennoblement)
 		}
 	}
-	return ennoblements, nil
+	return ennoblements, firstEnnoblementByID, nil
 }
 
 func (h *updateServerDataHandler) getConfig() (*models.ServerConfig, error) {
@@ -393,6 +405,11 @@ func (h *updateServerDataHandler) update() error {
 		return err
 	}
 
+	ennoblements, firstEnnoblementByID, err := h.getEnnoblements()
+	if err != nil {
+		return err
+	}
+
 	villages, err := h.getVillages()
 	if err != nil {
 		return err
@@ -405,7 +422,7 @@ func (h *updateServerDataHandler) update() error {
 	}
 	numberOfTribes := len(tribes)
 
-	players, err := h.getPlayers(pod)
+	players, err := h.getPlayers(pod, firstEnnoblementByID)
 	if err != nil {
 		return err
 	}
@@ -420,11 +437,6 @@ func (h *updateServerDataHandler) update() error {
 		return err
 	}
 	unitCfg, err := h.getUnitConfig()
-	if err != nil {
-		return err
-	}
-
-	ennoblements, err := h.getEnnoblements()
 	if err != nil {
 		return err
 	}
@@ -472,6 +484,7 @@ func (h *updateServerDataHandler) update() error {
 			Set("rank = EXCLUDED.rank").
 			Set("exist = EXCLUDED.exist").
 			Set("tribe_id = EXCLUDED.tribe_id").
+			Set("daily_growth = EXCLUDED.daily_growth").
 			Apply(attachODSetClauses).
 			Insert(); err != nil {
 			return errors.Wrap(err, "cannot insert players")

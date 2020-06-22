@@ -60,6 +60,18 @@ const (
 		END;
 		$BODY$
 		LANGUAGE plpgsql VOLATILE;
+		CREATE OR REPLACE FUNCTION check_daily_growth()
+			RETURNS trigger AS
+		$BODY$
+		BEGIN
+			IF NEW.exist = false THEN
+				NEW.daily_growth = 0;
+			END IF;
+
+			RETURN NEW;
+		END;
+		$BODY$
+		LANGUAGE plpgsql;
 	`
 	serverPGTriggers = `
 		DROP TRIGGER IF EXISTS ?0_tribe_changes ON ?0.players;
@@ -68,6 +80,12 @@ const (
 			ON ?0.players
 			FOR EACH ROW
 			EXECUTE PROCEDURE ?0.log_tribe_change();
+		DROP TRIGGER IF EXISTS ?0_check_daily_growth ON ?0.players;
+		CREATE TRIGGER ?0_check_daily_growth
+			BEFORE UPDATE
+			ON ?0.players
+			FOR EACH ROW
+			EXECUTE PROCEDURE check_daily_growth();
 		DROP TRIGGER IF EXISTS ?0_update_ennoblement_old_and_new_owner_tribe_id ON ?0.ennoblements;
 		CREATE TRIGGER ?0_update_ennoblement_old_and_new_owner_tribe_id
 			BEFORE INSERT

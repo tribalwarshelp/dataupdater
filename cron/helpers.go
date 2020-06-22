@@ -60,3 +60,15 @@ func countPlayerVillages(villages []*models.Village) int {
 	}
 	return count
 }
+
+func getDateDifferenceInDays(t1, t2 time.Time) int {
+	diff := t1.Sub(t2)
+	return int(diff.Hours() / 24)
+}
+
+func calcPlayerDailyGrowth(diffInDays, points int) int {
+	if diffInDays > 0 {
+		return points / diffInDays
+	}
+	return 0
+}
