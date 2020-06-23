@@ -244,7 +244,11 @@ func (h *updateServerDataHandler) getTribes(od map[int]*models.OpponentsDefeated
 		if ok {
 			tribe.OpponentsDefeated = *tribeOD
 		}
-		tribe.Dominance = float64(tribe.TotalVillages) / float64(numberOfVillages)
+		if tribe.TotalVillages > 0 && numberOfVillages > 0 {
+			tribe.Dominance = float64(tribe.TotalVillages) / float64(numberOfVillages) * 100
+		} else {
+			tribe.Dominance = 0
+		}
 		tribes = append(tribes, tribe)
 	}
 	return tribes, nil

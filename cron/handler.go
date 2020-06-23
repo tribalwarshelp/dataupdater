@@ -72,6 +72,18 @@ const (
 		END;
 		$BODY$
 		LANGUAGE plpgsql;
+		CREATE OR REPLACE FUNCTION check_dominance()
+			RETURNS trigger AS
+		$BODY$
+		BEGIN
+			IF NEW.exist = false THEN
+				NEW.dominance = 0;
+			END IF;
+
+			RETURN NEW;
+		END;
+		$BODY$
+		LANGUAGE plpgsql;
 		CREATE OR REPLACE FUNCTION ?0.insert_to_player_to_servers()
 			RETURNS trigger AS
 		$BODY$
@@ -98,6 +110,12 @@ const (
 			ON ?0.players
 			FOR EACH ROW
 			EXECUTE PROCEDURE check_daily_growth();
+		DROP TRIGGER IF EXISTS ?0_check_dominance ON ?0.tribes;
+		CREATE TRIGGER ?0_check_dominance
+			BEFORE UPDATE
+			ON ?0.tribes
+			FOR EACH ROW
+			EXECUTE PROCEDURE check_dominance();
 		DROP TRIGGER IF EXISTS ?0_update_ennoblement_old_and_new_owner_tribe_id ON ?0.ennoblements;
 		CREATE TRIGGER ?0_update_ennoblement_old_and_new_owner_tribe_id
 			BEFORE INSERT
