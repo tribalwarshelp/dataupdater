@@ -72,6 +72,18 @@ const (
 		END;
 		$BODY$
 		LANGUAGE plpgsql;
+		CREATE OR REPLACE FUNCTION ?0.insert_to_player_to_servers()
+			RETURNS trigger AS
+		$BODY$
+		BEGIN
+			INSERT INTO player_to_servers(server_key,player_id)
+				VALUES('?0', NEW.id)
+				ON CONFLICT DO NOTHING;
+
+			RETURN NEW;
+		END;
+		$BODY$
+		LANGUAGE plpgsql;
 	`
 	serverPGTriggers = `
 		DROP TRIGGER IF EXISTS ?0_tribe_changes ON ?0.players;
@@ -92,6 +104,12 @@ const (
 			ON ?0.ennoblements
 			FOR EACH ROW
 			EXECUTE PROCEDURE ?0.get_old_and_new_owner_tribe_id();
+		DROP TRIGGER IF EXISTS ?0_insert_to_player_to_servers ON ?0.players;
+		CREATE TRIGGER ?0_insert_to_player_to_servers
+			AFTER INSERT
+			ON ?0.players
+			FOR EACH ROW
+			EXECUTE PROCEDURE ?0.insert_to_player_to_servers();
 	`
 )
 
@@ -134,6 +152,7 @@ func (h *handler) init() error {
 		(*models.SpecialServer)(nil),
 		(*models.Server)(nil),
 		(*models.LangVersion)(nil),
+		(*models.PlayerToServer)(nil),
 	}
 
 	for _, model := range models {
