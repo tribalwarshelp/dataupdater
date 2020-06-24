@@ -35,6 +35,22 @@ const (
 		END;
 		$BODY$
 		LANGUAGE plpgsql VOLATILE;
+
+		CREATE OR REPLACE FUNCTION ?0.log_player_name_change()
+			RETURNS trigger AS
+		$BODY$
+		BEGIN
+			IF NEW.name <> OLD.name THEN
+				INSERT INTO player_name_changes(lang_version_tag,player_id,old_name,new_name,changed_on)
+				VALUES(?1,NEW.id,OLD.name,NEW.name,CURRENT_DATE)
+				ON CONFLICT DO NOTHING;
+			END IF;
+
+			RETURN NEW;
+		END;
+		$BODY$
+		LANGUAGE plpgsql VOLATILE;
+
 		CREATE OR REPLACE FUNCTION ?0.get_old_and_new_owner_tribe_id()
 			RETURNS trigger AS
 		$BODY$
@@ -60,6 +76,7 @@ const (
 		END;
 		$BODY$
 		LANGUAGE plpgsql VOLATILE;
+
 		CREATE OR REPLACE FUNCTION check_daily_growth()
 			RETURNS trigger AS
 		$BODY$
@@ -72,6 +89,23 @@ const (
 		END;
 		$BODY$
 		LANGUAGE plpgsql;
+
+		CREATE OR REPLACE FUNCTION check_existence()
+			RETURNS trigger AS
+		$BODY$
+		BEGIN
+			IF NEW.exist = false AND OLD.exist = true THEN
+				NEW.deleted_at = now();
+			END IF;
+			IF NEW.exist = true THEN
+				NEW.deleted_at = null;
+			END IF;
+
+			RETURN NEW;
+		END;
+		$BODY$
+		LANGUAGE plpgsql;
+
 		CREATE OR REPLACE FUNCTION check_dominance()
 			RETURNS trigger AS
 		$BODY$
@@ -84,6 +118,7 @@ const (
 		END;
 		$BODY$
 		LANGUAGE plpgsql;
+
 		CREATE OR REPLACE FUNCTION ?0.insert_to_player_to_servers()
 			RETURNS trigger AS
 		$BODY$
@@ -104,24 +139,49 @@ const (
 			ON ?0.players
 			FOR EACH ROW
 			EXECUTE PROCEDURE ?0.log_tribe_change();
+
+		DROP TRIGGER IF EXISTS ?0_name_change ON ?0.players;
+		CREATE TRIGGER ?0_name_change
+			AFTER UPDATE
+			ON ?0.players
+			FOR EACH ROW
+			EXECUTE PROCEDURE ?0.log_player_name_change();
+
 		DROP TRIGGER IF EXISTS ?0_check_daily_growth ON ?0.players;
 		CREATE TRIGGER ?0_check_daily_growth
 			BEFORE UPDATE
 			ON ?0.players
 			FOR EACH ROW
 			EXECUTE PROCEDURE check_daily_growth();
+
+		DROP TRIGGER IF EXISTS ?0_check_player_existence ON ?0.players;
+		CREATE TRIGGER ?0_check_player_existence
+			BEFORE UPDATE
+			ON ?0.players
+			FOR EACH ROW
+			EXECUTE PROCEDURE check_existence();
+
+		DROP TRIGGER IF EXISTS ?0_check_tribe_existence ON ?0.tribes;
+		CREATE TRIGGER ?0_check_tribe_existence
+			BEFORE UPDATE
+			ON ?0.tribes
+			FOR EACH ROW
+			EXECUTE PROCEDURE check_existence();
+
 		DROP TRIGGER IF EXISTS ?0_check_dominance ON ?0.tribes;
 		CREATE TRIGGER ?0_check_dominance
 			BEFORE UPDATE
 			ON ?0.tribes
 			FOR EACH ROW
 			EXECUTE PROCEDURE check_dominance();
+
 		DROP TRIGGER IF EXISTS ?0_update_ennoblement_old_and_new_owner_tribe_id ON ?0.ennoblements;
 		CREATE TRIGGER ?0_update_ennoblement_old_and_new_owner_tribe_id
 			BEFORE INSERT
 			ON ?0.ennoblements
 			FOR EACH ROW
 			EXECUTE PROCEDURE ?0.get_old_and_new_owner_tribe_id();
+
 		DROP TRIGGER IF EXISTS ?0_insert_to_player_to_servers ON ?0.players;
 		CREATE TRIGGER ?0_insert_to_player_to_servers
 			AFTER INSERT
@@ -171,6 +231,7 @@ func (h *handler) init() error {
 		(*models.Server)(nil),
 		(*models.LangVersion)(nil),
 		(*models.PlayerToServer)(nil),
+		(*models.PlayerNameChange)(nil),
 	}
 
 	for _, model := range models {
@@ -185,14 +246,14 @@ func (h *handler) init() error {
 	return tx.Commit()
 }
 
-func (h *handler) createSchema(key string) error {
-	tx, err := h.db.WithParam("SERVER", pg.Safe(key)).Begin()
+func (h *handler) createSchema(server *models.Server) error {
+	tx, err := h.db.WithParam("SERVER", pg.Safe(server.Key)).Begin()
 	if err != nil {
 		return err
 	}
 	defer tx.Close()
 
-	if _, err := tx.Exec(fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s", key)); err != nil {
+	if _, err := tx.Exec(fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s", server.Key)); err != nil {
 		return err
 	}
 
@@ -220,7 +281,7 @@ func (h *handler) createSchema(key string) error {
 		serverPGFunctions,
 		serverPGTriggers,
 	} {
-		if _, err := tx.Exec(statement, pg.Safe(key)); err != nil {
+		if _, err := tx.Exec(statement, pg.Safe(server.Key), server.LangVersionTag); err != nil {
 			return err
 		}
 	}
@@ -259,18 +320,19 @@ func (h *handler) getServers() ([]*models.Server, map[string]string, error) {
 			if langVersion.SpecialServers.Contains(serverKeyStr) {
 				continue
 			}
-			if err := h.createSchema(serverKeyStr); err != nil {
+			server := &models.Server{
+				Key:            serverKeyStr,
+				Status:         models.ServerStatusOpen,
+				LangVersionTag: langVersion.Tag,
+				LangVersion:    langVersion,
+			}
+			if err := h.createSchema(server); err != nil {
 				log.Print(errors.Wrapf(err, "Cannot create schema for %s", serverKey))
 				continue
 			}
 			serverKeys = append(serverKeys, serverKeyStr)
 			urls[serverKeyStr] = url.(string)
-			servers = append(servers, &models.Server{
-				Key:            serverKeyStr,
-				Status:         models.ServerStatusOpen,
-				LangVersionTag: langVersion.Tag,
-				LangVersion:    langVersion,
-			})
+			servers = append(servers, server)
 		}
 	}
 
