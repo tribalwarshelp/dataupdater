@@ -19,8 +19,8 @@ func (h *vacuumServerDBHandler) vacuum() error {
 	}
 	defer tx.Close()
 
-	withNotExitedPlayers := h.db.Model(&models.Player{}).Where("exist = false")
-	withNotExitedTribes := h.db.Model(&models.Tribe{}).Where("exist = false")
+	withNotExitedPlayers := h.db.Model(&models.Player{}).Where("exists = false")
+	withNotExitedTribes := h.db.Model(&models.Tribe{}).Where("exists = false")
 
 	_, err = tx.Model(&models.PlayerHistory{}).
 		With("players", withNotExitedPlayers).

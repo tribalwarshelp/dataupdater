@@ -61,7 +61,7 @@ const (
 			RETURNS trigger AS
 		$BODY$
 		BEGIN
-			IF NEW.exist = false THEN
+			IF NEW.exists = false THEN
 				NEW.daily_growth = 0;
 			END IF;
 
@@ -74,10 +74,10 @@ const (
 			RETURNS trigger AS
 		$BODY$
 		BEGIN
-			IF NEW.exist = false AND OLD.exist = true THEN
+			IF NEW.exists = false AND OLD.exists = true THEN
 				NEW.deleted_at = now();
 			END IF;
-			IF NEW.exist = true THEN
+			IF NEW.exists = true THEN
 				NEW.deleted_at = null;
 			END IF;
 
@@ -90,8 +90,52 @@ const (
 			RETURNS trigger AS
 		$BODY$
 		BEGIN
-			IF NEW.exist = false THEN
+			IF NEW.exists = false THEN
 				NEW.dominance = 0;
+			END IF;
+
+			RETURN NEW;
+		END;
+		$BODY$
+		LANGUAGE plpgsql;
+
+		CREATE OR REPLACE FUNCTION check_most_points_most_villages_best_rank_values()
+			RETURNS trigger AS
+		$BODY$
+		BEGIN
+			IF NEW.most_points IS null OR NEW.points > NEW.most_points THEN
+				NEW.most_points = NEW.points;
+				NEW.most_points_at = now();
+			END IF;
+			IF NEW.most_villages IS null OR NEW.total_villages > NEW.most_villages THEN
+				NEW.most_villages = NEW.total_villages;
+				NEW.most_villages_at = now();
+			END IF;
+			IF NEW.best_rank IS null OR NEW.rank > NEW.best_rank THEN
+				NEW.best_rank = NEW.rank;
+				NEW.best_rank_at = now();
+			END IF;
+
+			RETURN NEW;
+		END;
+		$BODY$
+		LANGUAGE plpgsql;
+
+		CREATE OR REPLACE FUNCTION update_most_points_most_villages_best_rank()
+			RETURNS trigger AS
+		$BODY$
+		BEGIN
+			IF NEW.most_points IS null OR NEW.points > OLD.most_points THEN
+				NEW.most_points = NEW.points;
+				NEW.most_points_at = now();
+			END IF;
+			IF NEW.most_villages IS null OR NEW.total_villages > OLD.most_villages THEN
+				NEW.most_villages = NEW.total_villages;
+				NEW.most_villages_at = now();
+			END IF;
+			IF NEW.best_rank IS null OR NEW.rank > OLD.best_rank THEN
+				NEW.best_rank = NEW.rank;
+				NEW.best_rank_at = now();
 			END IF;
 
 			RETURN NEW;
@@ -168,5 +212,33 @@ const (
 			ON ?0.players
 			FOR EACH ROW
 			EXECUTE PROCEDURE ?0.insert_to_player_to_servers();
+
+		DROP TRIGGER IF EXISTS ?0_update_most_points_most_villages_best_rank ON ?0.players;
+		CREATE TRIGGER ?0_update_most_points_most_villages_best_rank
+			BEFORE UPDATE
+			ON ?0.players
+			FOR EACH ROW
+			EXECUTE PROCEDURE update_most_points_most_villages_best_rank();
+
+		DROP TRIGGER IF EXISTS ?0_check_points_villages_rank ON ?0.players;
+		CREATE TRIGGER ?0_check_points_villages_rank
+			BEFORE INSERT
+			ON ?0.players
+			FOR EACH ROW
+			EXECUTE PROCEDURE check_most_points_most_villages_best_rank_values();
+
+		DROP TRIGGER IF EXISTS ?0_update_most_points_most_villages_best_rank ON ?0.tribes;
+		CREATE TRIGGER ?0_update_most_points_most_villages_best_rank
+			BEFORE UPDATE
+			ON ?0.tribes
+			FOR EACH ROW
+			EXECUTE PROCEDURE update_most_points_most_villages_best_rank();
+
+		DROP TRIGGER IF EXISTS ?0_check_points_villages_rank ON ?0.tribes;
+		CREATE TRIGGER ?0_check_points_villages_rank
+			BEFORE INSERT
+			ON ?0.tribes
+			FOR EACH ROW
+			EXECUTE PROCEDURE check_most_points_most_villages_best_rank_values();
 	`
 )

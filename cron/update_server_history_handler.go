@@ -15,9 +15,10 @@ type updateServerHistoryHandler struct {
 
 func (h *updateServerHistoryHandler) update() error {
 	players := []*models.Player{}
-	if err := h.db.Model(&players).Where("exist = true").Select(); err != nil {
+	if err := h.db.Model(&players).Where("exists = true").Select(); err != nil {
 		return errors.Wrap(err, "cannot load players")
 	}
+
 	ph := []*models.PlayerHistory{}
 	for _, player := range players {
 		ph = append(ph, &models.PlayerHistory{
@@ -31,7 +32,7 @@ func (h *updateServerHistoryHandler) update() error {
 	}
 
 	tribes := []*models.Tribe{}
-	if err := h.db.Model(&tribes).Where("exist = true").Select(); err != nil {
+	if err := h.db.Model(&tribes).Where("exists = true").Select(); err != nil {
 		return errors.Wrap(err, "cannot load tribes")
 	}
 	th := []*models.TribeHistory{}

@@ -14,21 +14,21 @@ type updateServerStatsHandler struct {
 }
 
 func (h *updateServerStatsHandler) prepare() (*models.ServerStats, error) {
-	activePlayers, err := h.db.Model(&models.Player{}).Where("exist = true").Count()
+	activePlayers, err := h.db.Model(&models.Player{}).Where("exists = true").Count()
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot count active players")
 	}
-	inactivePlayers, err := h.db.Model(&models.Player{}).Where("exist = false").Count()
+	inactivePlayers, err := h.db.Model(&models.Player{}).Where("exists = false").Count()
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot count inactive players")
 	}
 	players := activePlayers + inactivePlayers
 
-	activeTribes, err := h.db.Model(&models.Tribe{}).Where("exist = true").Count()
+	activeTribes, err := h.db.Model(&models.Tribe{}).Where("exists = true").Count()
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot count active tribes")
 	}
-	inactiveTribes, err := h.db.Model(&models.Tribe{}).Where("exist = false").Count()
+	inactiveTribes, err := h.db.Model(&models.Tribe{}).Where("exists = false").Count()
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot count inactive tribes")
 	}

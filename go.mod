@@ -9,7 +9,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/segmentio/encoding v0.1.14 // indirect
-	github.com/tribalwarshelp/shared v0.0.0-20200625103607-9768e416aea9
+	github.com/tribalwarshelp/shared v0.0.0-20200625120510-6d18ee334662
 	golang.org/x/net v0.0.0-20200625001655-4c5254603344 // indirect
 	golang.org/x/sys v0.0.0-20200622214017-ed371f2e16b4 // indirect
 	google.golang.org/grpc v1.30.0 // indirect

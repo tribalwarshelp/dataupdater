@@ -122,7 +122,7 @@ func (h *updateServerDataHandler) parsePlayerLine(line []string) (*models.Player
 	var err error
 	ex := true
 	player := &models.Player{
-		Exist: &ex,
+		Exists: &ex,
 	}
 	player.ID, err = strconv.Atoi(line[0])
 	if err != nil {
@@ -190,7 +190,7 @@ func (h *updateServerDataHandler) parseTribeLine(line []string) (*models.Tribe, 
 	var err error
 	ex := true
 	tribe := &models.Tribe{
-		Exist: &ex,
+		Exists: &ex,
 	}
 	tribe.ID, err = strconv.Atoi(line[0])
 	if err != nil {
@@ -531,7 +531,7 @@ func (h *updateServerDataHandler) update() error {
 			Set("points = EXCLUDED.points").
 			Set("all_points = EXCLUDED.all_points").
 			Set("rank = EXCLUDED.rank").
-			Set("exist = EXCLUDED.exist").
+			Set("exists = EXCLUDED.exists").
 			Set("dominance = EXCLUDED.dominance").
 			Apply(attachODSetClauses).
 			Insert(); err != nil {
@@ -544,7 +544,7 @@ func (h *updateServerDataHandler) update() error {
 		}
 		if _, err := tx.Model(&models.Tribe{}).
 			Where("id NOT IN (?)", pg.In(ids)).
-			Set("exist = false").
+			Set("exists = false").
 			Update(); err != nil && err != pg.ErrNoRows {
 			return errors.Wrap(err, "cannot update not exist tribes")
 		}
@@ -583,7 +583,7 @@ func (h *updateServerDataHandler) update() error {
 			Set("total_villages = EXCLUDED.total_villages").
 			Set("points = EXCLUDED.points").
 			Set("rank = EXCLUDED.rank").
-			Set("exist = EXCLUDED.exist").
+			Set("exists = EXCLUDED.exists").
 			Set("tribe_id = EXCLUDED.tribe_id").
 			Set("daily_growth = EXCLUDED.daily_growth").
 			Apply(attachODSetClauses).
@@ -597,7 +597,7 @@ func (h *updateServerDataHandler) update() error {
 		}
 		if _, err := tx.Model(&models.Player{}).
 			Where("id NOT IN (?)", pg.In(ids)).
-			Set("exist = false").
+			Set("exists = false").
 			Update(); err != nil && err != pg.ErrNoRows {
 			return errors.Wrap(err, "cannot update not exist players")
 		}
