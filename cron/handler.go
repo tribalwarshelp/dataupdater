@@ -21,174 +21,6 @@ import (
 
 const (
 	endpointGetServers = "/backend/get_servers.php"
-	serverPGFunctions  = `
-		CREATE OR REPLACE FUNCTION ?0.log_tribe_change()
-			RETURNS trigger AS
-		$BODY$
-		BEGIN
-			IF NEW.tribe_id <> OLD.tribe_id THEN
-				INSERT INTO ?0.tribe_changes(player_id,old_tribe_id,new_tribe_id,created_at)
-				VALUES(OLD.id,OLD.tribe_id,NEW.tribe_id,now());
-			END IF;
-
-			RETURN NEW;
-		END;
-		$BODY$
-		LANGUAGE plpgsql VOLATILE;
-
-		CREATE OR REPLACE FUNCTION ?0.log_player_name_change()
-			RETURNS trigger AS
-		$BODY$
-		BEGIN
-			IF NEW.name <> OLD.name THEN
-				INSERT INTO player_name_changes(lang_version_tag,player_id,old_name,new_name,changed_on)
-				VALUES(?1,NEW.id,OLD.name,NEW.name,CURRENT_DATE)
-				ON CONFLICT DO NOTHING;
-			END IF;
-
-			RETURN NEW;
-		END;
-		$BODY$
-		LANGUAGE plpgsql VOLATILE;
-
-		CREATE OR REPLACE FUNCTION ?0.get_old_and_new_owner_tribe_id()
-			RETURNS trigger AS
-		$BODY$
-		BEGIN
-			IF NEW.old_owner_id <> 0 THEN
-				SELECT tribe_id INTO NEW.old_owner_tribe_id
-					FROM ?0.players
-					WHERE id = NEW.old_owner_id;
-			END IF;
-			IF NEW.old_owner_tribe_id IS NULL THEN
-				NEW.old_owner_tribe_id = 0;
-			END IF;
-			IF NEW.new_owner_id <> 0 THEN
-				SELECT tribe_id INTO NEW.new_owner_tribe_id
-					FROM ?0.players
-					WHERE id = NEW.new_owner_id;
-			END IF;
-			IF NEW.new_owner_tribe_id IS NULL THEN
-				NEW.new_owner_tribe_id = 0;
-			END IF;
-
-			RETURN NEW;
-		END;
-		$BODY$
-		LANGUAGE plpgsql VOLATILE;
-
-		CREATE OR REPLACE FUNCTION check_daily_growth()
-			RETURNS trigger AS
-		$BODY$
-		BEGIN
-			IF NEW.exist = false THEN
-				NEW.daily_growth = 0;
-			END IF;
-
-			RETURN NEW;
-		END;
-		$BODY$
-		LANGUAGE plpgsql;
-
-		CREATE OR REPLACE FUNCTION check_existence()
-			RETURNS trigger AS
-		$BODY$
-		BEGIN
-			IF NEW.exist = false AND OLD.exist = true THEN
-				NEW.deleted_at = now();
-			END IF;
-			IF NEW.exist = true THEN
-				NEW.deleted_at = null;
-			END IF;
-
-			RETURN NEW;
-		END;
-		$BODY$
-		LANGUAGE plpgsql;
-
-		CREATE OR REPLACE FUNCTION check_dominance()
-			RETURNS trigger AS
-		$BODY$
-		BEGIN
-			IF NEW.exist = false THEN
-				NEW.dominance = 0;
-			END IF;
-
-			RETURN NEW;
-		END;
-		$BODY$
-		LANGUAGE plpgsql;
-
-		CREATE OR REPLACE FUNCTION ?0.insert_to_player_to_servers()
-			RETURNS trigger AS
-		$BODY$
-		BEGIN
-			INSERT INTO player_to_servers(server_key,player_id)
-				VALUES('?0', NEW.id)
-				ON CONFLICT DO NOTHING;
-
-			RETURN NEW;
-		END;
-		$BODY$
-		LANGUAGE plpgsql;
-	`
-	serverPGTriggers = `
-		DROP TRIGGER IF EXISTS ?0_tribe_changes ON ?0.players;
-		CREATE TRIGGER ?0_tribe_changes
-			AFTER UPDATE
-			ON ?0.players
-			FOR EACH ROW
-			EXECUTE PROCEDURE ?0.log_tribe_change();
-
-		DROP TRIGGER IF EXISTS ?0_name_change ON ?0.players;
-		CREATE TRIGGER ?0_name_change
-			AFTER UPDATE
-			ON ?0.players
-			FOR EACH ROW
-			EXECUTE PROCEDURE ?0.log_player_name_change();
-
-		DROP TRIGGER IF EXISTS ?0_check_daily_growth ON ?0.players;
-		CREATE TRIGGER ?0_check_daily_growth
-			BEFORE UPDATE
-			ON ?0.players
-			FOR EACH ROW
-			EXECUTE PROCEDURE check_daily_growth();
-
-		DROP TRIGGER IF EXISTS ?0_check_player_existence ON ?0.players;
-		CREATE TRIGGER ?0_check_player_existence
-			BEFORE UPDATE
-			ON ?0.players
-			FOR EACH ROW
-			EXECUTE PROCEDURE check_existence();
-
-		DROP TRIGGER IF EXISTS ?0_check_tribe_existence ON ?0.tribes;
-		CREATE TRIGGER ?0_check_tribe_existence
-			BEFORE UPDATE
-			ON ?0.tribes
-			FOR EACH ROW
-			EXECUTE PROCEDURE check_existence();
-
-		DROP TRIGGER IF EXISTS ?0_check_dominance ON ?0.tribes;
-		CREATE TRIGGER ?0_check_dominance
-			BEFORE UPDATE
-			ON ?0.tribes
-			FOR EACH ROW
-			EXECUTE PROCEDURE check_dominance();
-
-		DROP TRIGGER IF EXISTS ?0_update_ennoblement_old_and_new_owner_tribe_id ON ?0.ennoblements;
-		CREATE TRIGGER ?0_update_ennoblement_old_and_new_owner_tribe_id
-			BEFORE INSERT
-			ON ?0.ennoblements
-			FOR EACH ROW
-			EXECUTE PROCEDURE ?0.get_old_and_new_owner_tribe_id();
-
-		DROP TRIGGER IF EXISTS ?0_insert_to_player_to_servers ON ?0.players;
-		CREATE TRIGGER ?0_insert_to_player_to_servers
-			AFTER INSERT
-			ON ?0.players
-			FOR EACH ROW
-			EXECUTE PROCEDURE ?0.insert_to_player_to_servers();
-	`
 )
 
 type handler struct {
@@ -210,8 +42,12 @@ func Attach(c *cron.Cron, db *pg.DB) error {
 	if _, err := c.AddFunc("30 1 * * *", h.updateStats); err != nil {
 		return err
 	}
+	if _, err := c.AddFunc("30 2 * * *", h.vacuumDatabase); err != nil {
+		return err
+	}
 	go func() {
-		h.updateServersData()
+		// h.updateServersData()
+		h.vacuumDatabase()
 		h.updateServersHistory()
 		h.updateStats()
 	}()
@@ -266,6 +102,8 @@ func (h *handler) createSchema(server *models.Server) error {
 		(*models.TribeHistory)(nil),
 		(*models.PlayerHistory)(nil),
 		(*models.TribeChange)(nil),
+		(*models.DailyPlayerStats)(nil),
+		(*models.DailyTribeStats)(nil),
 	}
 
 	for _, model := range models {
@@ -365,7 +203,7 @@ func (h *handler) updateServersData() {
 	}
 
 	var wg sync.WaitGroup
-	max := runtime.NumCPU() * 5
+	max := runtime.NumCPU() * 2
 	count := 0
 
 	for _, server := range servers {
@@ -491,4 +329,43 @@ func (h *handler) updateStats() {
 		log.Println(err)
 		return
 	}
+}
+
+func (h *handler) vacuumDatabase() {
+	servers := []*models.Server{}
+	err := h.db.
+		Model(&servers).
+		Select()
+	if err != nil {
+		log.Fatal(errors.Wrap(err, "vacuumDatabase"))
+		return
+	}
+
+	var wg sync.WaitGroup
+	max := runtime.NumCPU() * 5
+	count := 0
+
+	for _, server := range servers {
+		if count >= max {
+			wg.Wait()
+			count = 0
+		}
+		sh := &vacuumServerDBHandler{
+			db: h.db.WithParam("SERVER", pg.Safe(server.Key)),
+		}
+		count++
+		wg.Add(1)
+		go func(server *models.Server, sh *vacuumServerDBHandler) {
+			defer wg.Done()
+			log.Printf("%s: vacuuming database", server.Key)
+			if err := sh.vacuum(); err != nil {
+				log.Println(errors.Wrap(err, server.Key))
+				return
+			} else {
+				log.Printf("%s: database vacuumed", server.Key)
+			}
+		}(server, sh)
+	}
+
+	wg.Wait()
 }

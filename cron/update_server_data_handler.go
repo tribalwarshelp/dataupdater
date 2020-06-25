@@ -399,6 +399,76 @@ func (h *updateServerDataHandler) getUnitConfig() (*models.UnitConfig, error) {
 	return cfg, nil
 }
 
+func (h *updateServerDataHandler) isDateTheSameAsServerHistoryUpdatedAt(t time.Time) bool {
+	return t.Year() == h.server.HistoryUpdatedAt.Year() &&
+		t.Month() == h.server.HistoryUpdatedAt.Month() &&
+		t.Day() == h.server.HistoryUpdatedAt.Day()
+}
+
+func (h *updateServerDataHandler) calculateODDifference(od1 models.OpponentsDefeated, od2 models.OpponentsDefeated) models.OpponentsDefeated {
+	return models.OpponentsDefeated{
+		RankAtt:    (od1.RankAtt - od2.RankAtt) * -1,
+		ScoreAtt:   od1.ScoreAtt - od2.ScoreAtt,
+		RankDef:    (od1.RankDef - od2.RankDef) * -1,
+		ScoreDef:   od1.ScoreDef - od2.ScoreDef,
+		RankSup:    (od1.RankSup - od2.RankSup) * -1,
+		ScoreSup:   od1.ScoreSup - od2.ScoreSup,
+		RankTotal:  (od1.RankTotal - od2.RankTotal) * -1,
+		ScoreTotal: od1.ScoreTotal - od2.ScoreTotal,
+	}
+}
+
+func (h *updateServerDataHandler) calculateDailyTribeStats(tribes []*models.Tribe,
+	history []*models.TribeHistory) []*models.DailyTribeStats {
+	dailyStats := []*models.DailyTribeStats{}
+
+	for _, historyRecord := range history {
+		if !h.isDateTheSameAsServerHistoryUpdatedAt(historyRecord.CreatedAt) {
+			continue
+		}
+		if index := searchByID(makeTribesSearchable(tribes), historyRecord.TribeID); index != 0 {
+			tribe := tribes[index]
+			dailyStats = append(dailyStats, &models.DailyTribeStats{
+				TribeID:           tribe.ID,
+				Members:           tribe.TotalMembers - historyRecord.TotalMembers,
+				Villages:          tribe.TotalVillages - historyRecord.TotalVillages,
+				Points:            tribe.Points - historyRecord.Points,
+				AllPoints:         tribe.AllPoints - historyRecord.AllPoints,
+				Rank:              (tribe.Rank - historyRecord.Rank) * -1,
+				Dominance:         tribe.Dominance - historyRecord.Dominance,
+				CreatedAt:         historyRecord.CreatedAt,
+				OpponentsDefeated: h.calculateODDifference(tribe.OpponentsDefeated, historyRecord.OpponentsDefeated),
+			})
+		}
+	}
+
+	return dailyStats
+}
+
+func (h *updateServerDataHandler) calculateDailyPlayerStats(players []*models.Player,
+	history []*models.PlayerHistory) []*models.DailyPlayerStats {
+	dailyStats := []*models.DailyPlayerStats{}
+
+	for _, historyRecord := range history {
+		if !h.isDateTheSameAsServerHistoryUpdatedAt(historyRecord.CreatedAt) {
+			continue
+		}
+		if index := searchByID(makePlayersSearchable(players), historyRecord.PlayerID); index != 0 {
+			player := players[index]
+			dailyStats = append(dailyStats, &models.DailyPlayerStats{
+				PlayerID:          player.ID,
+				Villages:          player.TotalVillages - historyRecord.TotalVillages,
+				Points:            player.Points - historyRecord.Points,
+				Rank:              (player.Rank - historyRecord.Rank) * -1,
+				CreatedAt:         historyRecord.CreatedAt,
+				OpponentsDefeated: h.calculateODDifference(player.OpponentsDefeated, historyRecord.OpponentsDefeated),
+			})
+		}
+	}
+
+	return dailyStats
+}
+
 func (h *updateServerDataHandler) update() error {
 	pod, err := h.getOD(false)
 	if err != nil {
@@ -476,7 +546,34 @@ func (h *updateServerDataHandler) update() error {
 			Where("id NOT IN (?)", pg.In(ids)).
 			Set("exist = false").
 			Update(); err != nil && err != pg.ErrNoRows {
-			return errors.Wrap(err, "cannot update not existed tribes")
+			return errors.Wrap(err, "cannot update not exist tribes")
+		}
+
+		tribesHistory := []*models.TribeHistory{}
+		if err := tx.Model(&tribesHistory).
+			DistinctOn("tribe_id").
+			Column("*").
+			Where("tribe_id IN (?)", pg.In(ids)).
+			Order("tribe_id DESC", "created_at DESC").
+			Select(); err != nil && err != pg.ErrNoRows {
+			return errors.Wrap(err, "cannot select tribes history")
+		}
+
+		todaysTribesStats := h.calculateDailyTribeStats(tribes, tribesHistory)
+		if len(todaysTribesStats) > 0 {
+			if _, err := tx.
+				Model(&todaysTribesStats).
+				OnConflict("ON CONSTRAINT daily_tribe_stats_tribe_id_created_at_key DO UPDATE").
+				Set("members = EXCLUDED.members").
+				Set("villages = EXCLUDED.villages").
+				Set("points = EXCLUDED.points").
+				Set("all_points = EXCLUDED.all_points").
+				Set("rank = EXCLUDED.rank").
+				Set("dominance = EXCLUDED.dominance").
+				Apply(attachODSetClauses).
+				Insert(); err != nil {
+				return errors.Wrap(err, "cannot insert today's tribes stats")
+			}
 		}
 	}
 	if len(players) > 0 {
@@ -502,7 +599,30 @@ func (h *updateServerDataHandler) update() error {
 			Where("id NOT IN (?)", pg.In(ids)).
 			Set("exist = false").
 			Update(); err != nil && err != pg.ErrNoRows {
-			return errors.Wrap(err, "cannot update not existed players")
+			return errors.Wrap(err, "cannot update not exist players")
+		}
+
+		playerHistory := []*models.PlayerHistory{}
+		if err := tx.Model(&playerHistory).
+			DistinctOn("player_id").
+			Column("*").
+			Where("player_id IN (?)", pg.In(ids)).
+			Order("player_id DESC", "created_at DESC").Select(); err != nil && err != pg.ErrNoRows {
+			return errors.Wrap(err, "cannot select players history")
+		}
+
+		todaysPlayersStats := h.calculateDailyPlayerStats(players, playerHistory)
+		if len(todaysPlayersStats) > 0 {
+			if _, err := tx.
+				Model(&todaysPlayersStats).
+				OnConflict("ON CONSTRAINT daily_player_stats_player_id_created_at_key DO UPDATE").
+				Set("villages = EXCLUDED.villages").
+				Set("points = EXCLUDED.points").
+				Set("rank = EXCLUDED.rank").
+				Apply(attachODSetClauses).
+				Insert(); err != nil {
+				return errors.Wrap(err, "cannot insert today's players stats")
+			}
 		}
 	}
 	if len(villages) > 0 {
@@ -525,7 +645,7 @@ func (h *updateServerDataHandler) update() error {
 		if _, err := tx.Model(&models.Village{}).
 			Where("id NOT IN (?)", pg.In(ids)).
 			Delete(); err != nil && err != pg.ErrNoRows {
-			return errors.Wrap(err, "cannot delete not existed villages")
+			return errors.Wrap(err, "cannot delete not exist villages")
 		}
 	}
 	if len(ennoblements) > 0 {
