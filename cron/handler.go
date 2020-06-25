@@ -46,7 +46,7 @@ func Attach(c *cron.Cron, db *pg.DB) error {
 		return err
 	}
 	go func() {
-		// h.updateServersData()
+		h.updateServersData()
 		h.vacuumDatabase()
 		h.updateServersHistory()
 		h.updateStats()
