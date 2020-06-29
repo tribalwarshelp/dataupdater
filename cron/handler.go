@@ -39,10 +39,10 @@ func Attach(c *cron.Cron, db *pg.DB) error {
 	if _, err := c.AddFunc("30 0 * * *", h.updateServersHistory); err != nil {
 		return err
 	}
-	if _, err := c.AddFunc("30 1 * * *", h.updateStats); err != nil {
+	if _, err := c.AddFunc("30 1 * * *", h.vacuumDatabase); err != nil {
 		return err
 	}
-	if _, err := c.AddFunc("30 2 * * *", h.vacuumDatabase); err != nil {
+	if _, err := c.AddFunc("30 2 * * *", h.updateStats); err != nil {
 		return err
 	}
 	go func() {

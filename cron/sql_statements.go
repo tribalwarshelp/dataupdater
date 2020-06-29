@@ -21,7 +21,7 @@ const (
 		$BODY$
 		BEGIN
 			IF NEW.name <> OLD.name THEN
-				INSERT INTO player_name_changes(lang_version_tag,player_id,old_name,new_name,changed_on)
+				INSERT INTO player_name_changes(lang_version_tag,player_id,old_name,new_name,change_date)
 				VALUES(?1,NEW.id,OLD.name,NEW.name,CURRENT_DATE)
 				ON CONFLICT DO NOTHING;
 			END IF;

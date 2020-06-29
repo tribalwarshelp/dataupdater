@@ -423,7 +423,7 @@ func (h *updateServerDataHandler) calculateDailyTribeStats(tribes []*models.Trib
 	dailyStats := []*models.DailyTribeStats{}
 
 	for _, historyRecord := range history {
-		if !h.isDateTheSameAsServerHistoryUpdatedAt(historyRecord.CreatedAt) {
+		if !h.isDateTheSameAsServerHistoryUpdatedAt(historyRecord.CreateDate) {
 			continue
 		}
 		if index := searchByID(makeTribesSearchable(tribes), historyRecord.TribeID); index != 0 {
@@ -436,7 +436,7 @@ func (h *updateServerDataHandler) calculateDailyTribeStats(tribes []*models.Trib
 				AllPoints:         tribe.AllPoints - historyRecord.AllPoints,
 				Rank:              (tribe.Rank - historyRecord.Rank) * -1,
 				Dominance:         tribe.Dominance - historyRecord.Dominance,
-				CreatedAt:         historyRecord.CreatedAt,
+				CreateDate:        historyRecord.CreateDate,
 				OpponentsDefeated: h.calculateODDifference(tribe.OpponentsDefeated, historyRecord.OpponentsDefeated),
 			})
 		}
@@ -450,7 +450,7 @@ func (h *updateServerDataHandler) calculateDailyPlayerStats(players []*models.Pl
 	dailyStats := []*models.DailyPlayerStats{}
 
 	for _, historyRecord := range history {
-		if !h.isDateTheSameAsServerHistoryUpdatedAt(historyRecord.CreatedAt) {
+		if !h.isDateTheSameAsServerHistoryUpdatedAt(historyRecord.CreateDate) {
 			continue
 		}
 		if index := searchByID(makePlayersSearchable(players), historyRecord.PlayerID); index != 0 {
@@ -460,7 +460,7 @@ func (h *updateServerDataHandler) calculateDailyPlayerStats(players []*models.Pl
 				Villages:          player.TotalVillages - historyRecord.TotalVillages,
 				Points:            player.Points - historyRecord.Points,
 				Rank:              (player.Rank - historyRecord.Rank) * -1,
-				CreatedAt:         historyRecord.CreatedAt,
+				CreateDate:        historyRecord.CreateDate,
 				OpponentsDefeated: h.calculateODDifference(player.OpponentsDefeated, historyRecord.OpponentsDefeated),
 			})
 		}
@@ -554,7 +554,7 @@ func (h *updateServerDataHandler) update() error {
 			DistinctOn("tribe_id").
 			Column("*").
 			Where("tribe_id IN (?)", pg.In(ids)).
-			Order("tribe_id DESC", "created_at DESC").
+			Order("tribe_id DESC", "create_date DESC").
 			Select(); err != nil && err != pg.ErrNoRows {
 			return errors.Wrap(err, "cannot select tribes history")
 		}
@@ -563,7 +563,7 @@ func (h *updateServerDataHandler) update() error {
 		if len(todaysTribesStats) > 0 {
 			if _, err := tx.
 				Model(&todaysTribesStats).
-				OnConflict("ON CONSTRAINT daily_tribe_stats_tribe_id_created_at_key DO UPDATE").
+				OnConflict("ON CONSTRAINT daily_tribe_stats_tribe_id_create_date_key DO UPDATE").
 				Set("members = EXCLUDED.members").
 				Set("villages = EXCLUDED.villages").
 				Set("points = EXCLUDED.points").
@@ -607,7 +607,7 @@ func (h *updateServerDataHandler) update() error {
 			DistinctOn("player_id").
 			Column("*").
 			Where("player_id IN (?)", pg.In(ids)).
-			Order("player_id DESC", "created_at DESC").Select(); err != nil && err != pg.ErrNoRows {
+			Order("player_id DESC", "create_date DESC").Select(); err != nil && err != pg.ErrNoRows {
 			return errors.Wrap(err, "cannot select players history")
 		}
 
@@ -615,7 +615,7 @@ func (h *updateServerDataHandler) update() error {
 		if len(todaysPlayersStats) > 0 {
 			if _, err := tx.
 				Model(&todaysPlayersStats).
-				OnConflict("ON CONSTRAINT daily_player_stats_player_id_created_at_key DO UPDATE").
+				OnConflict("ON CONSTRAINT daily_player_stats_player_id_create_date_key DO UPDATE").
 				Set("villages = EXCLUDED.villages").
 				Set("points = EXCLUDED.points").
 				Set("rank = EXCLUDED.rank").
