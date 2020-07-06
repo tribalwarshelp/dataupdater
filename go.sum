@@ -94,6 +94,8 @@ github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc h1:9lRDQMhESg+zvGYm
 github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc/go.mod h1:bciPuU6GHm1iF1pBvUfxfsH0Wmnc2VbpgvbI9ZWuIRs=
 github.com/tribalwarshelp/shared v0.0.0-20200629123803-0cd6cb6f1e87 h1:TMuZUk0wW+8dXSGVJVLRFFhLONKKYJRnLBFvbb9XTrE=
 github.com/tribalwarshelp/shared v0.0.0-20200629123803-0cd6cb6f1e87/go.mod h1:tf+2yTHasV6jAF3V2deZ9slNoCyBzC0fMdTjI7clf6Y=
+github.com/tribalwarshelp/twcron v0.0.0-20200629130116-b320263c4502 h1:6sIsm8dw+9qY3mdVJUSaJOfXWcrWxJrlLA8u3uTcADs=
+github.com/tribalwarshelp/twcron v0.0.0-20200629130116-b320263c4502/go.mod h1:dLYqb08YNQQUu4KNVm69nf7GOjwM96DoXNmI5CLuBLE=
 github.com/vmihailenco/bufpool v0.1.5/go.mod h1:fL9i/PRTuS7AELqAHwSU1Zf1c70xhkhGe/cD5ud9pJk=
 github.com/vmihailenco/bufpool v0.1.11 h1:gOq2WmBrq0i2yW5QJ16ykccQ4wH9UyEsgLm6czKAd94=
 github.com/vmihailenco/bufpool v0.1.11/go.mod h1:AFf/MOy3l2CFTKbxwt0mp2MwnqjNEs5H/UxrkA5jxTQ=

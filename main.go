@@ -8,7 +8,7 @@ import (
 
 	"github.com/tribalwarshelp/shared/mode"
 
-	_cron "github.com/tribalwarshelp/twcron/cron"
+	_cron "github.com/tribalwarshelp/cron/cron"
 
 	"github.com/go-pg/pg/v10"
 	"github.com/joho/godotenv"

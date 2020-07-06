@@ -203,7 +203,7 @@ func (h *handler) updateServersData() {
 	}
 
 	var wg sync.WaitGroup
-	max := runtime.NumCPU() * 2
+	max := runtime.NumCPU()
 	count := 0
 
 	for _, server := range servers {
