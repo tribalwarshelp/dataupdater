@@ -550,7 +550,7 @@ func (h *updateServerDataHandler) update() error {
 		}
 
 		tribesHistory := []*models.TribeHistory{}
-		if err := tx.Model(&tribesHistory).
+		if err := h.db.Model(&tribesHistory).
 			DistinctOn("tribe_id").
 			Column("*").
 			Where("tribe_id IN (?)", pg.In(ids)).
@@ -603,7 +603,7 @@ func (h *updateServerDataHandler) update() error {
 		}
 
 		playerHistory := []*models.PlayerHistory{}
-		if err := tx.Model(&playerHistory).
+		if err := h.db.Model(&playerHistory).
 			DistinctOn("player_id").
 			Column("*").
 			Where("player_id IN (?)", pg.In(ids)).
@@ -626,6 +626,11 @@ func (h *updateServerDataHandler) update() error {
 		}
 	}
 	if len(villages) > 0 {
+		if _, err := tx.Model(&models.Village{}).
+			Where("true").
+			Delete(); err != nil && err != pg.ErrNoRows {
+			return errors.Wrap(err, "cannot delete villages")
+		}
 		if _, err := tx.Model(&villages).
 			OnConflict("(id) DO UPDATE").
 			Set("name = EXCLUDED.name").
@@ -636,16 +641,6 @@ func (h *updateServerDataHandler) update() error {
 			Set("player_id = EXCLUDED.player_id").
 			Insert(); err != nil {
 			return errors.Wrap(err, "cannot insert villages")
-		}
-
-		ids := []int{}
-		for _, village := range villages {
-			ids = append(ids, village.ID)
-		}
-		if _, err := tx.Model(&models.Village{}).
-			Where("id NOT IN (?)", pg.In(ids)).
-			Delete(); err != nil && err != pg.ErrNoRows {
-			return errors.Wrap(err, "cannot delete not exist villages")
 		}
 	}
 	if len(ennoblements) > 0 {
