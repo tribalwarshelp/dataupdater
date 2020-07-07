@@ -421,12 +421,13 @@ func (h *updateServerDataHandler) calculateODifference(od1 models.OpponentsDefea
 func (h *updateServerDataHandler) calculateDailyTribeStats(tribes []*models.Tribe,
 	history []*models.TribeHistory) []*models.DailyTribeStats {
 	dailyStats := []*models.DailyTribeStats{}
+	searchableTribes := makeTribesSearchable(tribes)
 
 	for _, historyRecord := range history {
 		if !h.isDateTheSameAsServerHistoryUpdatedAt(historyRecord.CreateDate) {
 			continue
 		}
-		if index := searchByID(makeTribesSearchable(tribes), historyRecord.TribeID); index != 0 {
+		if index := searchByID(searchableTribes, historyRecord.TribeID); index != 0 {
 			tribe := tribes[index]
 			dailyStats = append(dailyStats, &models.DailyTribeStats{
 				TribeID:           tribe.ID,
@@ -448,12 +449,13 @@ func (h *updateServerDataHandler) calculateDailyTribeStats(tribes []*models.Trib
 func (h *updateServerDataHandler) calculateDailyPlayerStats(players []*models.Player,
 	history []*models.PlayerHistory) []*models.DailyPlayerStats {
 	dailyStats := []*models.DailyPlayerStats{}
+	searchablePlayers := makePlayersSearchable(players)
 
 	for _, historyRecord := range history {
 		if !h.isDateTheSameAsServerHistoryUpdatedAt(historyRecord.CreateDate) {
 			continue
 		}
-		if index := searchByID(makePlayersSearchable(players), historyRecord.PlayerID); index != 0 {
+		if index := searchByID(searchablePlayers, historyRecord.PlayerID); index != 0 {
 			player := players[index]
 			dailyStats = append(dailyStats, &models.DailyPlayerStats{
 				PlayerID:          player.ID,
