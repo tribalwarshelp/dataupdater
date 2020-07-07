@@ -202,40 +202,26 @@ func (h *handler) updateServersData() {
 		return
 	}
 
-	var wg sync.WaitGroup
-	max := runtime.NumCPU()
-	count := 0
-
 	for _, server := range servers {
 		url, ok := urls[server.Key]
 		if !ok {
 			log.Printf("No one URL associated with key: %s, skipping...", server.Key)
 			continue
 		}
-		if count >= max {
-			wg.Wait()
-			count = 0
-		}
+
 		sh := &updateServerDataHandler{
 			db:      h.db.WithParam("SERVER", pg.Safe(server.Key)),
 			baseURL: url,
 			server:  server,
 		}
-		count++
-		wg.Add(1)
-		go func(server *models.Server, sh *updateServerDataHandler) {
-			defer wg.Done()
-			log.Printf("%s: updating data", server.Key)
-			if err := sh.update(); err != nil {
-				log.Println(errors.Wrap(err, server.Key))
-				return
-			} else {
-				log.Printf("%s: data updated", server.Key)
-			}
-		}(server, sh)
+		log.Printf("%s: updating data", server.Key)
+		if err := sh.update(); err != nil {
+			log.Println(errors.Wrap(err, server.Key))
+			return
+		} else {
+			log.Printf("%s: data updated", server.Key)
+		}
 	}
-
-	wg.Wait()
 }
 
 func (h *handler) updateServersHistory() {

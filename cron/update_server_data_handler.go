@@ -405,7 +405,7 @@ func (h *updateServerDataHandler) isDateTheSameAsServerHistoryUpdatedAt(t time.T
 		t.Day() == h.server.HistoryUpdatedAt.Day()
 }
 
-func (h *updateServerDataHandler) calculateODDifference(od1 models.OpponentsDefeated, od2 models.OpponentsDefeated) models.OpponentsDefeated {
+func (h *updateServerDataHandler) calculateODifference(od1 models.OpponentsDefeated, od2 models.OpponentsDefeated) models.OpponentsDefeated {
 	return models.OpponentsDefeated{
 		RankAtt:    (od1.RankAtt - od2.RankAtt) * -1,
 		ScoreAtt:   od1.ScoreAtt - od2.ScoreAtt,
@@ -437,7 +437,7 @@ func (h *updateServerDataHandler) calculateDailyTribeStats(tribes []*models.Trib
 				Rank:              (tribe.Rank - historyRecord.Rank) * -1,
 				Dominance:         tribe.Dominance - historyRecord.Dominance,
 				CreateDate:        historyRecord.CreateDate,
-				OpponentsDefeated: h.calculateODDifference(tribe.OpponentsDefeated, historyRecord.OpponentsDefeated),
+				OpponentsDefeated: h.calculateODifference(tribe.OpponentsDefeated, historyRecord.OpponentsDefeated),
 			})
 		}
 	}
@@ -461,7 +461,7 @@ func (h *updateServerDataHandler) calculateDailyPlayerStats(players []*models.Pl
 				Points:            player.Points - historyRecord.Points,
 				Rank:              (player.Rank - historyRecord.Rank) * -1,
 				CreateDate:        historyRecord.CreateDate,
-				OpponentsDefeated: h.calculateODDifference(player.OpponentsDefeated, historyRecord.OpponentsDefeated),
+				OpponentsDefeated: h.calculateODifference(player.OpponentsDefeated, historyRecord.OpponentsDefeated),
 			})
 		}
 	}
@@ -542,8 +542,8 @@ func (h *updateServerDataHandler) update() error {
 		for _, tribe := range tribes {
 			ids = append(ids, tribe.ID)
 		}
-		if _, err := tx.Model(&models.Tribe{}).
-			Where("id NOT IN (?)", pg.In(ids)).
+		if _, err := tx.Model(&tribes).
+			Where("tribe.id NOT IN (?)", pg.In(ids)).
 			Set("exists = false").
 			Update(); err != nil && err != pg.ErrNoRows {
 			return errors.Wrap(err, "cannot update not exist tribes")
