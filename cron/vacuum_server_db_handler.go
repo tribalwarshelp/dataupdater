@@ -19,11 +19,11 @@ func (h *vacuumServerDBHandler) vacuum() error {
 	}
 	defer tx.Close()
 
-	withNotExitedPlayers := h.db.Model(&models.Player{}).Where("exists = false")
-	withNotExitedTribes := h.db.Model(&models.Tribe{}).Where("exists = false")
+	withNotExistedPlayers := h.db.Model(&models.Player{}).Where("exists = false")
+	withNotExistedTribes := h.db.Model(&models.Tribe{}).Where("exists = false")
 
 	_, err = tx.Model(&models.PlayerHistory{}).
-		With("players", withNotExitedPlayers).
+		With("players", withNotExistedPlayers).
 		Where("player_id IN (Select id FROM players) OR player_history.create_date < ?", time.Now().Add(-1*24*time.Hour*90)).
 		Delete()
 	if err != nil {
@@ -31,7 +31,7 @@ func (h *vacuumServerDBHandler) vacuum() error {
 	}
 
 	_, err = tx.Model(&models.TribeHistory{}).
-		With("tribes", withNotExitedTribes).
+		With("tribes", withNotExistedTribes).
 		Where("tribe_id IN (Select id FROM tribes) OR tribe_history.create_date < ?", time.Now().Add(-1*24*time.Hour*90)).
 		Delete()
 	if err != nil {
@@ -39,7 +39,7 @@ func (h *vacuumServerDBHandler) vacuum() error {
 	}
 
 	_, err = tx.Model(&models.DailyPlayerStats{}).
-		With("players", withNotExitedPlayers).
+		With("players", withNotExistedPlayers).
 		Where("player_id IN (Select id FROM players) OR daily_player_stats.create_date < ?", time.Now().Add(-1*24*time.Hour*90)).
 		Delete()
 	if err != nil {
@@ -47,7 +47,7 @@ func (h *vacuumServerDBHandler) vacuum() error {
 	}
 
 	_, err = tx.Model(&models.DailyTribeStats{}).
-		With("tribes", withNotExitedTribes).
+		With("tribes", withNotExistedTribes).
 		Where("tribe_id IN (Select id FROM tribes) OR daily_tribe_stats.create_date < ?", time.Now().Add(-1*24*time.Hour*90)).
 		Delete()
 	if err != nil {

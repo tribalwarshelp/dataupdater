@@ -79,6 +79,14 @@ func (h *handler) init() error {
 		}
 	}
 
+	for _, statement := range []string{
+		pgDefaultValues,
+	} {
+		if _, err := tx.Exec(statement); err != nil {
+			return err
+		}
+	}
+
 	return tx.Commit()
 }
 
@@ -118,6 +126,7 @@ func (h *handler) createSchema(server *models.Server) error {
 	for _, statement := range []string{
 		serverPGFunctions,
 		serverPGTriggers,
+		serverPGDefaultValues,
 	} {
 		if _, err := tx.Exec(statement, pg.Safe(server.Key), server.LangVersionTag); err != nil {
 			return err

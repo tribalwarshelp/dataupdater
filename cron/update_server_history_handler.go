@@ -19,6 +19,7 @@ func (h *updateServerHistoryHandler) update() error {
 		return errors.Wrap(err, "cannot load players")
 	}
 
+	createDate := time.Now()
 	ph := []*models.PlayerHistory{}
 	for _, player := range players {
 		ph = append(ph, &models.PlayerHistory{
@@ -28,6 +29,7 @@ func (h *updateServerHistoryHandler) update() error {
 			Points:            player.Points,
 			Rank:              player.Rank,
 			TribeID:           player.TribeID,
+			CreateDate:        createDate,
 		})
 	}
 
@@ -46,6 +48,7 @@ func (h *updateServerHistoryHandler) update() error {
 			AllPoints:         tribe.AllPoints,
 			Rank:              tribe.Rank,
 			Dominance:         tribe.Dominance,
+			CreateDate:        createDate,
 		})
 	}
 

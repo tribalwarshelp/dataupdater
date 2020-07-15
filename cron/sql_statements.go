@@ -241,4 +241,16 @@ const (
 			FOR EACH ROW
 			EXECUTE PROCEDURE check_most_points_most_villages_best_rank_values();
 	`
+
+	serverPGDefaultValues = `
+		ALTER TABLE ?0.daily_player_stats ALTER COLUMN create_date set default CURRENT_DATE;
+		ALTER TABLE ?0.daily_tribe_stats ALTER COLUMN create_date set default CURRENT_DATE;
+		ALTER TABLE ?0.player_history ALTER COLUMN create_date set default CURRENT_DATE;
+		ALTER TABLE ?0.tribe_history ALTER COLUMN create_date set default CURRENT_DATE;
+		ALTER TABLE ?0.stats ALTER COLUMN create_date set default CURRENT_DATE;
+	`
+
+	pgDefaultValues = `
+		ALTER TABLE player_name_changes ALTER COLUMN change_date set default CURRENT_DATE;
+	`
 )
