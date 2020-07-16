@@ -226,7 +226,6 @@ func (h *handler) updateServersData() {
 		log.Printf("%s: updating data", server.Key)
 		if err := sh.update(); err != nil {
 			log.Println(errors.Wrap(err, server.Key))
-			return
 		} else {
 			log.Printf("%s: data updated", server.Key)
 		}
