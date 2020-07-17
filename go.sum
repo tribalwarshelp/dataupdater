@@ -92,12 +92,10 @@ github.com/stretchr/testify v1.5.1 h1:nOGnQDM7FYENwehXlg/kFVnos3rEvtKTjRvOWSzb6H
 github.com/stretchr/testify v1.5.1/go.mod h1:5W2xD1RspED5o8YsWQXVCued0rvSQ+mT+I5cxcmMvtA=
 github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc h1:9lRDQMhESg+zvGYmW5DyG0UqvY96Bu5QYsTLvCHdrgo=
 github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc/go.mod h1:bciPuU6GHm1iF1pBvUfxfsH0Wmnc2VbpgvbI9ZWuIRs=
-github.com/tribalwarshelp/shared v0.0.0-20200629123803-0cd6cb6f1e87 h1:TMuZUk0wW+8dXSGVJVLRFFhLONKKYJRnLBFvbb9XTrE=
-github.com/tribalwarshelp/shared v0.0.0-20200629123803-0cd6cb6f1e87/go.mod h1:tf+2yTHasV6jAF3V2deZ9slNoCyBzC0fMdTjI7clf6Y=
-github.com/tribalwarshelp/shared v0.0.0-20200707075151-722e4a520a3c h1:wenSReGHPux51q5s+9Ji0TOHCt8Zx6whxsjx8Iv7aZg=
-github.com/tribalwarshelp/shared v0.0.0-20200707075151-722e4a520a3c/go.mod h1:tf+2yTHasV6jAF3V2deZ9slNoCyBzC0fMdTjI7clf6Y=
 github.com/tribalwarshelp/shared v0.0.0-20200716113106-11ff9ddf1bda h1:bMO271vY8rLlypSHzSfANe7rz7dUi/+uNkcv7qUOWxw=
 github.com/tribalwarshelp/shared v0.0.0-20200716113106-11ff9ddf1bda/go.mod h1:tf+2yTHasV6jAF3V2deZ9slNoCyBzC0fMdTjI7clf6Y=
+github.com/tribalwarshelp/shared v0.0.0-20200717091627-87f23d34cff8 h1:oHu1004MQm/Y/474uvp1iYAABQjSZsdrb3pxjRSdOb4=
+github.com/tribalwarshelp/shared v0.0.0-20200717091627-87f23d34cff8/go.mod h1:tf+2yTHasV6jAF3V2deZ9slNoCyBzC0fMdTjI7clf6Y=
 github.com/vmihailenco/bufpool v0.1.5/go.mod h1:fL9i/PRTuS7AELqAHwSU1Zf1c70xhkhGe/cD5ud9pJk=
 github.com/vmihailenco/bufpool v0.1.11 h1:gOq2WmBrq0i2yW5QJ16ykccQ4wH9UyEsgLm6czKAd94=
 github.com/vmihailenco/bufpool v0.1.11/go.mod h1:AFf/MOy3l2CFTKbxwt0mp2MwnqjNEs5H/UxrkA5jxTQ=
