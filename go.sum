@@ -96,6 +96,8 @@ github.com/tribalwarshelp/shared v0.0.0-20200716113106-11ff9ddf1bda h1:bMO271vY8
 github.com/tribalwarshelp/shared v0.0.0-20200716113106-11ff9ddf1bda/go.mod h1:tf+2yTHasV6jAF3V2deZ9slNoCyBzC0fMdTjI7clf6Y=
 github.com/tribalwarshelp/shared v0.0.0-20200717091627-87f23d34cff8 h1:oHu1004MQm/Y/474uvp1iYAABQjSZsdrb3pxjRSdOb4=
 github.com/tribalwarshelp/shared v0.0.0-20200717091627-87f23d34cff8/go.mod h1:tf+2yTHasV6jAF3V2deZ9slNoCyBzC0fMdTjI7clf6Y=
+github.com/tribalwarshelp/shared v0.0.0-20200721124533-776cbb36074b h1:8bgZG6Zi3ROqtvpeUOj3a19mtES88VjeNwkUF0FI+Vs=
+github.com/tribalwarshelp/shared v0.0.0-20200721124533-776cbb36074b/go.mod h1:tf+2yTHasV6jAF3V2deZ9slNoCyBzC0fMdTjI7clf6Y=
 github.com/vmihailenco/bufpool v0.1.5/go.mod h1:fL9i/PRTuS7AELqAHwSU1Zf1c70xhkhGe/cD5ud9pJk=
 github.com/vmihailenco/bufpool v0.1.11 h1:gOq2WmBrq0i2yW5QJ16ykccQ4wH9UyEsgLm6czKAd94=
 github.com/vmihailenco/bufpool v0.1.11/go.mod h1:AFf/MOy3l2CFTKbxwt0mp2MwnqjNEs5H/UxrkA5jxTQ=

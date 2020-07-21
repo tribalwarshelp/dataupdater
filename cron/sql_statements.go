@@ -2,7 +2,6 @@ package cron
 
 const (
 	serverPGFunctions = `
-		DROP FUNCTION IF EXISTS ?0.log_tribe_change();
 		CREATE OR REPLACE FUNCTION ?0.log_tribe_change_on_insert()
 			RETURNS trigger AS
 		$BODY$
@@ -172,20 +171,20 @@ const (
 		LANGUAGE plpgsql;
 	`
 	serverPGTriggers = `
-		DROP TRIGGER IF EXISTS ?0_tribe_changes ON ?0.players;
-		DROP TRIGGER IF EXISTS ?0_log_tribe_changes_on_update ON ?0.players;
-		CREATE TRIGGER ?0_log_tribe_changes_on_update
-			AFTER UPDATE
-			ON ?0.players
-			FOR EACH ROW
-			EXECUTE PROCEDURE ?0.log_tribe_change_on_update();
-
-		DROP TRIGGER IF EXISTS ?0_log_tribe_changes_on_insert ON ?0.players;
-		CREATE TRIGGER ?0_log_tribe_changes_on_insert
+		DROP TRIGGER IF EXISTS ?0_log_tribe_change_on_insert ON ?0.players;
+		CREATE TRIGGER ?0_log_tribe_change_on_insert
 			AFTER INSERT
 			ON ?0.players
 			FOR EACH ROW
 			EXECUTE PROCEDURE ?0.log_tribe_change_on_insert();
+	
+		DROP TRIGGER IF EXISTS ?0_tribe_changes ON ?0.players;
+		DROP TRIGGER IF EXISTS ?0_log_tribe_change_on_update ON ?0.players;
+		CREATE TRIGGER ?0_log_tribe_change_on_update
+			AFTER UPDATE
+			ON ?0.players
+			FOR EACH ROW
+			EXECUTE PROCEDURE ?0.log_tribe_change_on_update();
 
 		DROP TRIGGER IF EXISTS ?0_name_change ON ?0.players;
 		CREATE TRIGGER ?0_name_change
