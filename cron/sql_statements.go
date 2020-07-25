@@ -125,7 +125,7 @@ const (
 				NEW.most_villages = NEW.total_villages;
 				NEW.most_villages_at = now();
 			END IF;
-			IF NEW.best_rank IS null OR NEW.rank < NEW.best_rank THEN
+			IF NEW.best_rank IS null OR NEW.rank < NEW.best_rank OR NEW.best_rank = 0 THEN
 				NEW.best_rank = NEW.rank;
 				NEW.best_rank_at = now();
 			END IF;
@@ -147,7 +147,7 @@ const (
 				NEW.most_villages = NEW.total_villages;
 				NEW.most_villages_at = now();
 			END IF;
-			IF NEW.best_rank IS null OR NEW.rank < OLD.best_rank THEN
+			IF NEW.best_rank IS null OR NEW.rank < OLD.best_rank OR OLD.best_rank = 0 THEN
 				NEW.best_rank = NEW.rank;
 				NEW.best_rank_at = now();
 			END IF;

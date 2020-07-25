@@ -36,7 +36,7 @@ func Attach(c *cron.Cron, db *pg.DB) error {
 	if _, err := c.AddFunc("0 * * * *", h.updateServersData); err != nil {
 		return err
 	}
-	if _, err := c.AddFunc("30 0 * * *", h.updateServersHistory); err != nil {
+	if _, err := c.AddFunc("30 0 * * *", h.updateServerHistories); err != nil {
 		return err
 	}
 	if _, err := c.AddFunc("30 1 * * *", h.vacuumDatabase); err != nil {
@@ -48,7 +48,7 @@ func Attach(c *cron.Cron, db *pg.DB) error {
 	go func() {
 		h.updateServersData()
 		h.vacuumDatabase()
-		h.updateServersHistory()
+		h.updateServerHistories()
 		h.updateStats()
 	}()
 
@@ -232,7 +232,7 @@ func (h *handler) updateServersData() {
 	}
 }
 
-func (h *handler) updateServersHistory() {
+func (h *handler) updateServerHistories() {
 	servers := []*models.Server{}
 	now := time.Now()
 	t1 := time.Date(now.Year(), now.Month(), now.Day(), 0, 30, 0, 0, time.UTC)
@@ -241,7 +241,7 @@ func (h *handler) updateServersHistory() {
 		Where("status = ? AND (history_updated_at < ? OR history_updated_at IS NULL)", models.ServerStatusOpen, t1).
 		Select()
 	if err != nil {
-		log.Println(errors.Wrap(err, "updateServersHistory"))
+		log.Println(errors.Wrap(err, "updateServerHistories"))
 		return
 	}
 
