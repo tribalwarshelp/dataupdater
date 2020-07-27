@@ -1,12 +1,15 @@
 package cron
 
 import (
+	"context"
 	"fmt"
+	"log"
 	"net/url"
 	"strconv"
 	"time"
 
 	"github.com/tribalwarshelp/shared/models"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/go-pg/pg/v10"
 	"github.com/go-pg/pg/v10/orm"
@@ -17,23 +20,29 @@ const (
 	endpointConfig         = "/interface.php?func=get_config"
 	endpointUnitConfig     = "/interface.php?func=get_unit_info"
 	endpointBuildingConfig = "/interface.php?func=get_building_info"
-	endpointPlayers        = "/map/player.txt"
-	endpointTribe          = "/map/ally.txt"
-	endpointVillage        = "/map/village.txt"
-	endpointKillAtt        = "/map/kill_att.txt"
-	endpointKillDef        = "/map/kill_def.txt"
-	endpointKillSup        = "/map/kill_sup.txt"
-	endpointKillAll        = "/map/kill_all.txt"
-	endpointKillAttTribe   = "/map/kill_att_tribe.txt"
-	endpointKillDefTribe   = "/map/kill_def_tribe.txt"
-	endpointKillAllTribe   = "/map/kill_all_tribe.txt"
-	endpointConquer        = "/map/conquer.txt"
+	endpointPlayers        = "/map/player.txt.gz"
+	endpointTribe          = "/map/ally.txt.gz"
+	endpointVillage        = "/map/village.txt.gz"
+	endpointKillAtt        = "/map/kill_att.txt.gz"
+	endpointKillDef        = "/map/kill_def.txt.gz"
+	endpointKillSup        = "/map/kill_sup.txt.gz"
+	endpointKillAll        = "/map/kill_all.txt.gz"
+	endpointKillAttTribe   = "/map/kill_att_tribe.txt.gz"
+	endpointKillDefTribe   = "/map/kill_def_tribe.txt.gz"
+	endpointKillAllTribe   = "/map/kill_all_tribe.txt.gz"
+	endpointConquer        = "/map/conquer.txt.gz"
 )
 
 type updateServerDataHandler struct {
-	baseURL string
-	db      *pg.DB
-	server  *models.Server
+	baseURL      string
+	db           *pg.DB
+	server       *models.Server
+	ennoblements []*models.Ennoblement
+	pod          map[int]*models.OpponentsDefeated
+	tod          map[int]*models.OpponentsDefeated
+	players      []*models.Player
+	tribes       []*models.Tribe
+	villages     []*models.Village
 }
 
 type parsedODLine struct {
@@ -83,7 +92,7 @@ func (h *updateServerDataHandler) getOD(tribe bool) (map[int]*models.OpponentsDe
 		if url == "" {
 			continue
 		}
-		lines, err := getCSVData(url, false)
+		lines, err := getCSVData(url, true)
 		if err != nil {
 			return nil, errors.Wrapf(err, "unable to get data, url %s", url)
 		}
@@ -155,7 +164,7 @@ func (h *updateServerDataHandler) parsePlayerLine(line []string) (*models.Player
 func (h *updateServerDataHandler) getPlayers(od map[int]*models.OpponentsDefeated,
 	firstEnnoblementByID map[int]*models.Ennoblement) ([]*models.Player, error) {
 	url := h.baseURL + endpointPlayers
-	lines, err := getCSVData(url, false)
+	lines, err := getCSVData(url, true)
 	if err != nil {
 		return nil, errors.Wrapf(err, "unable to get data, url %s", url)
 	}
@@ -230,7 +239,7 @@ func (h *updateServerDataHandler) parseTribeLine(line []string) (*models.Tribe, 
 
 func (h *updateServerDataHandler) getTribes(od map[int]*models.OpponentsDefeated, numberOfVillages int) ([]*models.Tribe, error) {
 	url := h.baseURL + endpointTribe
-	lines, err := getCSVData(url, false)
+	lines, err := getCSVData(url, true)
 	if err != nil {
 		return nil, errors.Wrapf(err, "unable to get data, url %s", url)
 	}
@@ -293,7 +302,7 @@ func (h *updateServerDataHandler) parseVillageLine(line []string) (*models.Villa
 
 func (h *updateServerDataHandler) getVillages() ([]*models.Village, error) {
 	url := h.baseURL + endpointVillage
-	lines, err := getCSVData(url, false)
+	lines, err := getCSVData(url, true)
 	if err != nil {
 		return nil, errors.Wrapf(err, "unable to get data, url %s", url)
 	}
@@ -337,7 +346,7 @@ func (h *updateServerDataHandler) parseEnnoblementLine(line []string) (*models.E
 
 func (h *updateServerDataHandler) getEnnoblements() ([]*models.Ennoblement, map[int]*models.Ennoblement, error) {
 	url := h.baseURL + endpointConquer
-	lines, err := getCSVData(url, false)
+	lines, err := getCSVData(url, true)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "unable to get data, url %s", url)
 	}
@@ -399,7 +408,7 @@ func (h *updateServerDataHandler) getUnitConfig() (*models.UnitConfig, error) {
 	return cfg, nil
 }
 
-func (h *updateServerDataHandler) isDateTheSameAsServerHistoryUpdatedAt(t time.Time) bool {
+func (h *updateServerDataHandler) isTheSameAsServerHistoryUpdatedAt(t time.Time) bool {
 	return t.Year() == h.server.HistoryUpdatedAt.Year() &&
 		t.Month() == h.server.HistoryUpdatedAt.Month() &&
 		t.Day() == h.server.HistoryUpdatedAt.Day()
@@ -424,7 +433,7 @@ func (h *updateServerDataHandler) calculateDailyTribeStats(tribes []*models.Trib
 	searchableTribes := makeTribesSearchable(tribes)
 
 	for _, historyRecord := range history {
-		if !h.isDateTheSameAsServerHistoryUpdatedAt(historyRecord.CreateDate) {
+		if !h.isTheSameAsServerHistoryUpdatedAt(historyRecord.CreateDate) {
 			continue
 		}
 		if index := searchByID(searchableTribes, historyRecord.TribeID); index != 0 {
@@ -452,7 +461,7 @@ func (h *updateServerDataHandler) calculateDailyPlayerStats(players []*models.Pl
 	searchablePlayers := makePlayersSearchable(players)
 
 	for _, historyRecord := range history {
-		if !h.isDateTheSameAsServerHistoryUpdatedAt(historyRecord.CreateDate) {
+		if !h.isTheSameAsServerHistoryUpdatedAt(historyRecord.CreateDate) {
 			continue
 		}
 		if index := searchByID(searchablePlayers, historyRecord.PlayerID); index != 0 {
@@ -517,141 +526,177 @@ func (h *updateServerDataHandler) update() error {
 		return err
 	}
 
-	tx, err := h.db.Begin()
-	if err != nil {
-		return err
-	}
-	defer tx.Close()
+	errGroup, _ := errgroup.WithContext(context.Background())
 
 	if len(tribes) > 0 {
-		if _, err := tx.Model(&tribes).
-			OnConflict("(id) DO UPDATE").
-			Set("name = EXCLUDED.name").
-			Set("tag = EXCLUDED.tag").
-			Set("total_members = EXCLUDED.total_members").
-			Set("total_villages = EXCLUDED.total_villages").
-			Set("points = EXCLUDED.points").
-			Set("all_points = EXCLUDED.all_points").
-			Set("rank = EXCLUDED.rank").
-			Set("exists = EXCLUDED.exists").
-			Set("dominance = EXCLUDED.dominance").
-			Apply(attachODSetClauses).
-			Insert(); err != nil {
-			return errors.Wrap(err, "cannot insert tribes")
-		}
-
 		ids := []int{}
 		for _, tribe := range tribes {
 			ids = append(ids, tribe.ID)
 		}
-		if _, err := tx.Model(&tribes).
-			Where("tribe.id NOT IN (?)", pg.In(ids)).
-			Set("exists = false").
-			Update(); err != nil && err != pg.ErrNoRows {
-			return errors.Wrap(err, "cannot update not exist tribes")
-		}
-
-		tribesHistory := []*models.TribeHistory{}
-		if err := h.db.Model(&tribesHistory).
-			DistinctOn("tribe_id").
-			Column("*").
-			Where("tribe_id IN (?)", pg.In(ids)).
-			Order("tribe_id DESC", "create_date DESC").
-			Select(); err != nil && err != pg.ErrNoRows {
-			return errors.Wrap(err, "cannot select tribes history")
-		}
-
-		todaysTribesStats := h.calculateDailyTribeStats(tribes, tribesHistory)
-		if len(todaysTribesStats) > 0 {
-			if _, err := tx.
-				Model(&todaysTribesStats).
-				OnConflict("ON CONSTRAINT daily_tribe_stats_tribe_id_create_date_key DO UPDATE").
-				Set("members = EXCLUDED.members").
-				Set("villages = EXCLUDED.villages").
+		errGroup.Go(func() error {
+			tx, err := h.db.Begin()
+			if err != nil {
+				return err
+			}
+			defer tx.Close()
+			if _, err := tx.Model(&tribes).
+				OnConflict("(id) DO UPDATE").
+				Set("name = EXCLUDED.name").
+				Set("tag = EXCLUDED.tag").
+				Set("total_members = EXCLUDED.total_members").
+				Set("total_villages = EXCLUDED.total_villages").
 				Set("points = EXCLUDED.points").
 				Set("all_points = EXCLUDED.all_points").
 				Set("rank = EXCLUDED.rank").
+				Set("exists = EXCLUDED.exists").
 				Set("dominance = EXCLUDED.dominance").
 				Apply(attachODSetClauses).
 				Insert(); err != nil {
-				return errors.Wrap(err, "cannot insert today's tribes stats")
+				return errors.Wrap(err, "cannot insert tribes")
 			}
-		}
+			if _, err := tx.Model(&tribes).
+				Where("tribe.id NOT IN (?)", pg.In(ids)).
+				Set("exists = false").
+				Update(); err != nil && err != pg.ErrNoRows {
+				return errors.Wrap(err, "cannot update not exist tribes")
+			}
+			return tx.Commit()
+		})
+
+		errGroup.Go(func() error {
+			tribesHistory := []*models.TribeHistory{}
+			if err := h.db.Model(&tribesHistory).
+				DistinctOn("tribe_id").
+				Column("*").
+				Where("tribe_id IN (?)", pg.In(ids)).
+				Order("tribe_id DESC", "create_date DESC").
+				Select(); err != nil && err != pg.ErrNoRows {
+				return errors.Wrap(err, "cannot select tribes history")
+			}
+			todaysTribesStats := h.calculateDailyTribeStats(tribes, tribesHistory)
+			if len(todaysTribesStats) > 0 {
+				if _, err := h.db.
+					Model(&todaysTribesStats).
+					OnConflict("ON CONSTRAINT daily_tribe_stats_tribe_id_create_date_key DO UPDATE").
+					Set("members = EXCLUDED.members").
+					Set("villages = EXCLUDED.villages").
+					Set("points = EXCLUDED.points").
+					Set("all_points = EXCLUDED.all_points").
+					Set("rank = EXCLUDED.rank").
+					Set("dominance = EXCLUDED.dominance").
+					Apply(attachODSetClauses).
+					Insert(); err != nil {
+					return errors.Wrap(err, "cannot insert today's tribes stats")
+				}
+			}
+			return nil
+		})
 	}
 	if len(players) > 0 {
-		if _, err := tx.Model(&players).
-			OnConflict("(id) DO UPDATE").
-			Set("name = EXCLUDED.name").
-			Set("total_villages = EXCLUDED.total_villages").
-			Set("points = EXCLUDED.points").
-			Set("rank = EXCLUDED.rank").
-			Set("exists = EXCLUDED.exists").
-			Set("tribe_id = EXCLUDED.tribe_id").
-			Set("daily_growth = EXCLUDED.daily_growth").
-			Apply(attachODSetClauses).
-			Insert(); err != nil {
-			return errors.Wrap(err, "cannot insert players")
-		}
-
 		ids := []int{}
 		for _, player := range players {
 			ids = append(ids, player.ID)
 		}
-		if _, err := tx.Model(&models.Player{}).
-			Where("id NOT IN (?)", pg.In(ids)).
-			Set("exists = false").
-			Update(); err != nil && err != pg.ErrNoRows {
-			return errors.Wrap(err, "cannot update not exist players")
-		}
-
-		playerHistory := []*models.PlayerHistory{}
-		if err := h.db.Model(&playerHistory).
-			DistinctOn("player_id").
-			Column("*").
-			Where("player_id IN (?)", pg.In(ids)).
-			Order("player_id DESC", "create_date DESC").Select(); err != nil && err != pg.ErrNoRows {
-			return errors.Wrap(err, "cannot select players history")
-		}
-
-		todaysPlayersStats := h.calculateDailyPlayerStats(players, playerHistory)
-		if len(todaysPlayersStats) > 0 {
-			if _, err := tx.
-				Model(&todaysPlayersStats).
-				OnConflict("ON CONSTRAINT daily_player_stats_player_id_create_date_key DO UPDATE").
-				Set("villages = EXCLUDED.villages").
+		errGroup.Go(func() error {
+			t := time.Now()
+			tx, err := h.db.Begin()
+			if err != nil {
+				return err
+			}
+			defer tx.Close()
+			if _, err := tx.Model(&players).
+				OnConflict("(id) DO UPDATE").
+				Set("name = EXCLUDED.name").
+				Set("total_villages = EXCLUDED.total_villages").
 				Set("points = EXCLUDED.points").
 				Set("rank = EXCLUDED.rank").
+				Set("exists = EXCLUDED.exists").
+				Set("tribe_id = EXCLUDED.tribe_id").
+				Set("daily_growth = EXCLUDED.daily_growth").
 				Apply(attachODSetClauses).
 				Insert(); err != nil {
-				return errors.Wrap(err, "cannot insert today's players stats")
+				return errors.Wrap(err, "cannot insert players")
 			}
-		}
+			if _, err := tx.Model(&models.Player{}).
+				Where("id NOT IN (?)", pg.In(ids)).
+				Set("exists = false").
+				Update(); err != nil && err != pg.ErrNoRows {
+				return errors.Wrap(err, "cannot update not exist players")
+			}
+			log.Println("players", time.Since(t))
+			return tx.Commit()
+		})
+
+		errGroup.Go(func() error {
+			tx, err := h.db.Begin()
+			if err != nil {
+				return err
+			}
+			defer tx.Close()
+			playerHistory := []*models.PlayerHistory{}
+			if err := h.db.Model(&playerHistory).
+				DistinctOn("player_id").
+				Column("*").
+				Where("player_id IN (?)", pg.In(ids)).
+				Order("player_id DESC", "create_date DESC").Select(); err != nil && err != pg.ErrNoRows {
+				return errors.Wrap(err, "cannot select players history")
+			}
+			todaysPlayersStats := h.calculateDailyPlayerStats(players, playerHistory)
+			if len(todaysPlayersStats) > 0 {
+				if _, err := tx.
+					Model(&todaysPlayersStats).
+					OnConflict("ON CONSTRAINT daily_player_stats_player_id_create_date_key DO UPDATE").
+					Set("villages = EXCLUDED.villages").
+					Set("points = EXCLUDED.points").
+					Set("rank = EXCLUDED.rank").
+					Apply(attachODSetClauses).
+					Insert(); err != nil {
+					return errors.Wrap(err, "cannot insert today's players stats")
+				}
+			}
+			return tx.Commit()
+		})
 	}
 	if len(villages) > 0 {
-		if _, err := tx.Model(&models.Village{}).
-			Where("true").
-			Delete(); err != nil && err != pg.ErrNoRows {
-			return errors.Wrap(err, "cannot delete villages")
-		}
-		if _, err := tx.Model(&villages).
-			OnConflict("(id) DO UPDATE").
-			Set("name = EXCLUDED.name").
-			Set("points = EXCLUDED.points").
-			Set("x = EXCLUDED.x").
-			Set("y = EXCLUDED.y").
-			Set("bonus = EXCLUDED.bonus").
-			Set("player_id = EXCLUDED.player_id").
-			Insert(); err != nil {
-			return errors.Wrap(err, "cannot insert villages")
-		}
+		errGroup.Go(func() error {
+			tx, err := h.db.Begin()
+			if err != nil {
+				return err
+			}
+			defer tx.Close()
+			if _, err := tx.Model(&models.Village{}).
+				Where("true").
+				Delete(); err != nil && err != pg.ErrNoRows {
+				return errors.Wrap(err, "cannot delete villages")
+			}
+			if _, err := tx.Model(&villages).
+				OnConflict("(id) DO UPDATE").
+				Set("name = EXCLUDED.name").
+				Set("points = EXCLUDED.points").
+				Set("x = EXCLUDED.x").
+				Set("y = EXCLUDED.y").
+				Set("bonus = EXCLUDED.bonus").
+				Set("player_id = EXCLUDED.player_id").
+				Insert(); err != nil {
+				return errors.Wrap(err, "cannot insert villages")
+			}
+			return tx.Commit()
+		})
 	}
 	if len(ennoblements) > 0 {
-		if _, err := tx.Model(&ennoblements).Insert(); err != nil {
-			return errors.Wrap(err, "cannot insert ennoblements")
-		}
+		errGroup.Go(func() error {
+			if _, err := h.db.Model(&ennoblements).Insert(); err != nil {
+				return errors.Wrap(err, "cannot insert ennoblements")
+			}
+			return nil
+		})
 	}
 
-	if _, err := tx.Model(h.server).
+	if err := errGroup.Wait(); err != nil {
+		return err
+	}
+
+	if _, err := h.db.Model(h.server).
 		Set("data_updated_at = ?", time.Now()).
 		Set("unit_config = ?", unitCfg).
 		Set("building_config = ?", buildingCfg).
@@ -665,7 +710,7 @@ func (h *updateServerDataHandler) update() error {
 		return errors.Wrap(err, "cannot update server")
 	}
 
-	return tx.Commit()
+	return nil
 }
 
 func attachODSetClauses(q *orm.Query) (*orm.Query, error) {

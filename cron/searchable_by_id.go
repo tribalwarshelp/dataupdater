@@ -6,20 +6,20 @@ type tribeSearchableByID struct {
 	*models.Tribe
 }
 
-func (t tribeSearchableByID) id() int {
-	return t.ID
+func (t tribeSearchableByID) ID() int {
+	return t.Tribe.ID
 }
 
 type playerSearchableByID struct {
 	*models.Player
 }
 
-func (t playerSearchableByID) id() int {
-	return t.ID
+func (t playerSearchableByID) ID() int {
+	return t.Player.ID
 }
 
 type searchableByID interface {
-	id() int
+	ID() int
 }
 
 func makePlayersSearchable(players []*models.Player) []searchableByID {
@@ -45,14 +45,14 @@ func searchByID(haystack []searchableByID, id int) int {
 	for low <= high {
 		median := (low + high) / 2
 
-		if haystack[median].id() < id {
+		if haystack[median].ID() < id {
 			low = median + 1
 		} else {
 			high = median - 1
 		}
 	}
 
-	if low == len(haystack) || haystack[low].id() != id {
+	if low == len(haystack) || haystack[low].ID() != id {
 		return 0
 	}
 

@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"runtime"
 	"syscall"
 
 	"github.com/tribalwarshelp/shared/mode"
@@ -29,6 +30,7 @@ func main() {
 		Password: os.Getenv("DB_PASSWORD"),
 		Database: os.Getenv("DB_NAME"),
 		Addr:     os.Getenv("DB_HOST") + ":" + os.Getenv("DB_PORT"),
+		PoolSize: runtime.NumCPU() * 5,
 	})
 	defer func() {
 		if err := db.Close(); err != nil {
