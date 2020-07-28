@@ -209,7 +209,7 @@ func (h *handler) getServers() ([]*models.Server, map[string]string, error) {
 		return nil, nil, err
 	}
 
-	go h.allServersCache.Set(servers)
+	go h.allServersCache.Clear()
 	log.Print("Servers loaded!")
 
 	return servers, urls, nil
