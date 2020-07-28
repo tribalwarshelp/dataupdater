@@ -3,7 +3,6 @@ package cron
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/url"
 	"strconv"
 	"time"
@@ -598,7 +597,6 @@ func (h *updateServerDataHandler) update() error {
 			ids = append(ids, player.ID)
 		}
 		errGroup.Go(func() error {
-			t := time.Now()
 			tx, err := h.db.Begin()
 			if err != nil {
 				return err
@@ -623,7 +621,6 @@ func (h *updateServerDataHandler) update() error {
 				Update(); err != nil && err != pg.ErrNoRows {
 				return errors.Wrap(err, "cannot update not exist players")
 			}
-			log.Println("players", time.Since(t))
 			return tx.Commit()
 		})
 

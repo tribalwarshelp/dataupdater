@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/tribalwarshelp/shared/cache/allservers"
 	"github.com/tribalwarshelp/shared/models"
 
 	phpserialize "github.com/Kichiyaki/go-php-serialize"
@@ -24,11 +25,17 @@ const (
 )
 
 type handler struct {
-	db *pg.DB
+	db              *pg.DB
+	allServersCache allservers.Cache
 }
 
-func Attach(c *cron.Cron, db *pg.DB) error {
-	h := &handler{db}
+type Config struct {
+	DB              *pg.DB
+	AllServersCache allservers.Cache
+}
+
+func Attach(c *cron.Cron, cfg Config) error {
+	h := &handler{cfg.DB, cfg.AllServersCache}
 	if err := h.init(); err != nil {
 		return err
 	}
@@ -137,6 +144,7 @@ func (h *handler) createSchema(server *models.Server) error {
 }
 
 func (h *handler) getServers() ([]*models.Server, map[string]string, error) {
+	log.Print("Loading servers...")
 	langVersions := []*models.LangVersion{}
 	if err := h.db.Model(&langVersions).Relation("SpecialServers").Select(); err != nil {
 		return nil, nil, errors.Wrap(err, "getServers")
@@ -200,6 +208,9 @@ func (h *handler) getServers() ([]*models.Server, map[string]string, error) {
 		Update(); err != nil {
 		return nil, nil, err
 	}
+
+	go h.allServersCache.Set(servers)
+	log.Print("Servers loaded!")
 
 	return servers, urls, nil
 }
