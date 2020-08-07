@@ -9,7 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/tribalwarshelp/shared/cache/allservers"
 	"github.com/tribalwarshelp/shared/models"
 
 	phpserialize "github.com/Kichiyaki/go-php-serialize"
@@ -25,17 +24,15 @@ const (
 )
 
 type handler struct {
-	db              *pg.DB
-	allServersCache allservers.Cache
+	db *pg.DB
 }
 
 type Config struct {
-	DB              *pg.DB
-	AllServersCache allservers.Cache
+	DB *pg.DB
 }
 
 func Attach(c *cron.Cron, cfg Config) error {
-	h := &handler{cfg.DB, cfg.AllServersCache}
+	h := &handler{cfg.DB}
 	if err := h.init(); err != nil {
 		return err
 	}
@@ -43,7 +40,7 @@ func Attach(c *cron.Cron, cfg Config) error {
 	if _, err := c.AddFunc("0 * * * *", h.updateServersData); err != nil {
 		return err
 	}
-	if _, err := c.AddFunc("30 0 * * *", h.updateServerHistories); err != nil {
+	if _, err := c.AddFunc("30 0 * * *", h.updateServerHistory); err != nil {
 		return err
 	}
 	if _, err := c.AddFunc("30 1 * * *", h.vacuumDatabase); err != nil {
@@ -55,7 +52,7 @@ func Attach(c *cron.Cron, cfg Config) error {
 	go func() {
 		h.updateServersData()
 		h.vacuumDatabase()
-		h.updateServerHistories()
+		h.updateServerHistory()
 		h.updateStats()
 	}()
 
@@ -209,7 +206,6 @@ func (h *handler) getServers() ([]*models.Server, map[string]string, error) {
 		return nil, nil, err
 	}
 
-	go h.allServersCache.Clear()
 	log.Print("Servers loaded!")
 
 	return servers, urls, nil
@@ -243,7 +239,7 @@ func (h *handler) updateServersData() {
 	}
 }
 
-func (h *handler) updateServerHistories() {
+func (h *handler) updateServerHistory() {
 	servers := []*models.Server{}
 	now := time.Now()
 	t1 := time.Date(now.Year(), now.Month(), now.Day(), 0, 30, 0, 0, time.UTC)
@@ -252,7 +248,7 @@ func (h *handler) updateServerHistories() {
 		Where("status = ? AND (history_updated_at < ? OR history_updated_at IS NULL)", models.ServerStatusOpen, t1).
 		Select()
 	if err != nil {
-		log.Println(errors.Wrap(err, "updateServerHistories"))
+		log.Println(errors.Wrap(err, "updateServerHistory"))
 		return
 	}
 

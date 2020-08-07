@@ -1,17 +1,12 @@
 package main
 
 import (
-	"context"
 	"log"
 	"os"
 	"os/signal"
 	"runtime"
 	"syscall"
-	"time"
 
-	"github.com/go-redis/redis/v8"
-	"github.com/pkg/errors"
-	"github.com/tribalwarshelp/shared/cache/allservers"
 	"github.com/tribalwarshelp/shared/mode"
 
 	_cron "github.com/tribalwarshelp/cron/cron"
@@ -43,28 +38,11 @@ func main() {
 		}
 	}()
 
-	redisClient := redis.NewClient(&redis.Options{
-		Addr:     os.Getenv("REDIS_HOST") + ":" + os.Getenv("REDIS_PORT"),
-		Password: os.Getenv("REDIS_PASSWORD"),
-	})
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	if err := redisClient.Ping(ctx).Err(); err != nil {
-		log.Fatal(errors.Wrap(err, "cannot connect to redis"))
-	}
-	cancel()
-	defer func() {
-		if err := redisClient.Close(); err != nil {
-			log.Fatal(err)
-		}
-	}()
-	allServersCache := allservers.New(redisClient)
-
 	c := cron.New(cron.WithChain(
 		cron.SkipIfStillRunning(cron.VerbosePrintfLogger(log.New(os.Stdout, "cron: ", log.LstdFlags))),
 	))
 	if err := _cron.Attach(c, _cron.Config{
-		DB:              db,
-		AllServersCache: allServersCache,
+		DB: db,
 	}); err != nil {
 		log.Fatal(err)
 	}
