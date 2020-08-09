@@ -557,7 +557,7 @@ func (h *updateServerDataHandler) update() error {
 				Where("tribe.id NOT IN (?)", pg.In(ids)).
 				Set("exists = false").
 				Update(); err != nil && err != pg.ErrNoRows {
-				return errors.Wrap(err, "cannot update not exist tribes")
+				return errors.Wrap(err, "cannot update not existed tribes")
 			}
 			return tx.Commit()
 		})
@@ -619,7 +619,7 @@ func (h *updateServerDataHandler) update() error {
 				Where("id NOT IN (?)", pg.In(ids)).
 				Set("exists = false").
 				Update(); err != nil && err != pg.ErrNoRows {
-				return errors.Wrap(err, "cannot update not exist players")
+				return errors.Wrap(err, "cannot update not existed players")
 			}
 			return tx.Commit()
 		})
