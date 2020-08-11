@@ -150,6 +150,7 @@ func (h *handler) getServers() ([]*models.Server, map[string]string, error) {
 	serverKeys := []string{}
 	servers := []*models.Server{}
 	urls := make(map[string]string)
+	loadedLangVersions := []models.LanguageTag{}
 	for _, langVersion := range langVersions {
 		resp, err := http.Get(fmt.Sprintf("https://%s%s", langVersion.Host, endpointGetServers))
 		if err != nil {
@@ -186,6 +187,8 @@ func (h *handler) getServers() ([]*models.Server, map[string]string, error) {
 			urls[serverKeyStr] = url.(string)
 			servers = append(servers, server)
 		}
+
+		loadedLangVersions = append(loadedLangVersions, langVersion.Tag)
 	}
 
 	if len(servers) > 0 {
@@ -201,7 +204,7 @@ func (h *handler) getServers() ([]*models.Server, map[string]string, error) {
 
 	if _, err := h.db.Model(&models.Server{}).
 		Set("status = ?", models.ServerStatusClosed).
-		Where("key NOT IN (?)", pg.In(serverKeys)).
+		Where("key NOT IN (?) AND lang_version_tag IN (?)", pg.In(serverKeys), pg.In(loadedLangVersions)).
 		Update(); err != nil {
 		return nil, nil, err
 	}
