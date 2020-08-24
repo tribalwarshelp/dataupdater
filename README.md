@@ -9,7 +9,7 @@ Features:
 
 ## Development
 
-**Required env variables to run this cron** (you can set them directly on your system or create .env.development file):
+**Required env variables to run this cron** (you can set them directly in your system or create .env.development file):
 
 ```
 DB_USER=your_db_user
@@ -28,5 +28,5 @@ DB_PASSWORD=your_db_pass
 
 1. Clone this repo.
 2. Navigate to the directory where you have cloned this repo.
-3. Set the required env variables directly on your system or create .env.development file.
+3. Set the required env variables directly in your system or create .env.development file.
 4. go run main.go
