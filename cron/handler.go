@@ -85,6 +85,8 @@ func (h *handler) init() error {
 
 	for _, statement := range []string{
 		pgDefaultValues,
+		allVersionsPGInsertStatements,
+		allSpecialServersPGInsertStatements,
 	} {
 		if _, err := tx.Exec(statement); err != nil {
 			return err

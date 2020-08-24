@@ -1,6 +1,44 @@
 package cron
 
 const (
+	allSpecialServersPGInsertStatements = `
+		INSERT INTO public.special_servers (lang_version_tag, key) VALUES ('pl', 'pls1') ON CONFLICT ON CONSTRAINT special_servers_lang_version_tag_key_key DO NOTHING;
+		INSERT INTO public.special_servers (lang_version_tag, key) VALUES ('en', 'ens1') ON CONFLICT ON CONSTRAINT special_servers_lang_version_tag_key_key DO NOTHING;
+		INSERT INTO public.special_servers (lang_version_tag, key) VALUES ('uk', 'uks1') ON CONFLICT ON CONSTRAINT special_servers_lang_version_tag_key_key DO NOTHING;
+		INSERT INTO public.special_servers (lang_version_tag, key) VALUES ('it', 'its1') ON CONFLICT ON CONSTRAINT special_servers_lang_version_tag_key_key DO NOTHING;
+		INSERT INTO public.special_servers (lang_version_tag, key) VALUES ('hu', 'hus1') ON CONFLICT ON CONSTRAINT special_servers_lang_version_tag_key_key DO NOTHING;
+		INSERT INTO public.special_servers (lang_version_tag, key) VALUES ('fr', 'frs1') ON CONFLICT ON CONSTRAINT special_servers_lang_version_tag_key_key DO NOTHING;
+		INSERT INTO public.special_servers (lang_version_tag, key) VALUES ('us', 'uss1') ON CONFLICT ON CONSTRAINT special_servers_lang_version_tag_key_key DO NOTHING;
+		INSERT INTO public.special_servers (lang_version_tag, key) VALUES ('nl', 'nls1') ON CONFLICT ON CONSTRAINT special_servers_lang_version_tag_key_key DO NOTHING;
+		INSERT INTO public.special_servers (lang_version_tag, key) VALUES ('es', 'ess1') ON CONFLICT ON CONSTRAINT special_servers_lang_version_tag_key_key DO NOTHING;
+		INSERT INTO public.special_servers (lang_version_tag, key) VALUES ('ro', 'ros1') ON CONFLICT ON CONSTRAINT special_servers_lang_version_tag_key_key DO NOTHING;
+		INSERT INTO public.special_servers (lang_version_tag, key) VALUES ('gr', 'grs1') ON CONFLICT ON CONSTRAINT special_servers_lang_version_tag_key_key DO NOTHING;
+		INSERT INTO public.special_servers (lang_version_tag, key) VALUES ('br', 'brs1') ON CONFLICT ON CONSTRAINT special_servers_lang_version_tag_key_key DO NOTHING;
+		INSERT INTO public.special_servers (lang_version_tag, key) VALUES ('tr', 'trs1') ON CONFLICT ON CONSTRAINT special_servers_lang_version_tag_key_key DO NOTHING;
+		INSERT INTO public.special_servers (lang_version_tag, key) VALUES ('cs', 'css1') ON CONFLICT ON CONSTRAINT special_servers_lang_version_tag_key_key DO NOTHING;
+		INSERT INTO public.special_servers (lang_version_tag, key) VALUES ('de', 'des1') ON CONFLICT ON CONSTRAINT special_servers_lang_version_tag_key_key DO NOTHING;
+		INSERT INTO public.special_servers (lang_version_tag, key) VALUES ('ru', 'rus1') ON CONFLICT ON CONSTRAINT special_servers_lang_version_tag_key_key DO NOTHING;
+		INSERT INTO public.special_servers (lang_version_tag, key) VALUES ('ch', 'chs1') ON CONFLICT ON CONSTRAINT special_servers_lang_version_tag_key_key DO NOTHING;
+	`
+	allVersionsPGInsertStatements = `
+		INSERT INTO public.lang_versions (tag, name, host, timezone) VALUES ('pl', 'Polska', 'plemiona.pl', 'Europe/Warsaw') ON CONFLICT (tag) DO NOTHING;
+		INSERT INTO public.lang_versions (tag, name, host, timezone) VALUES ('de', 'Deutschland', 'die-staemme.de', 'Europe/Berlin') ON CONFLICT (tag) DO NOTHING;
+		INSERT INTO public.lang_versions (tag, name, host, timezone) VALUES ('uk', 'United Kingdom', 'tribalwars.co.uk', 'Europe/London') ON CONFLICT (tag) DO NOTHING;
+		INSERT INTO public.lang_versions (tag, name, host, timezone) VALUES ('hu', 'Hungary', 'klanhaboru.hu', 'Europe/Budapest') ON CONFLICT (tag) DO NOTHING;
+		INSERT INTO public.lang_versions (tag, name, host, timezone) VALUES ('it', 'Italy', 'tribals.it', 'Europe/Rome') ON CONFLICT (tag) DO NOTHING;
+		INSERT INTO public.lang_versions (tag, name, host, timezone) VALUES ('fr', 'France', 'guerretribale.fr', 'Europe/Paris') ON CONFLICT (tag) DO NOTHING;
+		INSERT INTO public.lang_versions (tag, name, host, timezone) VALUES ('us', 'United States', 'tribalwars.us', 'America/Washington') ON CONFLICT (tag) DO NOTHING;
+		INSERT INTO public.lang_versions (tag, name, host, timezone) VALUES ('nl', 'The Netherlands', 'tribalwars.nl', 'Europe/Amsterdam') ON CONFLICT (tag) DO NOTHING;
+		INSERT INTO public.lang_versions (tag, name, host, timezone) VALUES ('es', 'Spain', 'guerrastribales.es', 'Europe/Madrid') ON CONFLICT (tag) DO NOTHING;
+		INSERT INTO public.lang_versions (tag, name, host, timezone) VALUES ('ro', 'Romania', 'triburile.ro', 'Europe/Bucharest') ON CONFLICT (tag) DO NOTHING;
+		INSERT INTO public.lang_versions (tag, name, host, timezone) VALUES ('gr', 'Greece', 'fyletikesmaxes.gr', 'Europe/Athens') ON CONFLICT (tag) DO NOTHING;
+		INSERT INTO public.lang_versions (tag, name, host, timezone) VALUES ('br', 'Brazil', 'tribalwars.com.br', 'America/Sao_Paulo') ON CONFLICT (tag) DO NOTHING;
+		INSERT INTO public.lang_versions (tag, name, host, timezone) VALUES ('tr', 'Turkey', 'klanlar.org', 'Europe/Instanbul') ON CONFLICT (tag) DO NOTHING;
+		INSERT INTO public.lang_versions (tag, name, host, timezone) VALUES ('cs', 'Czech Republic', 'divokekmeny.cz', 'Europe/Prague') ON CONFLICT (tag) DO NOTHING;
+		INSERT INTO public.lang_versions (tag, name, host, timezone) VALUES ('en', 'Germany', 'tribalwars.net', 'Europe/London') ON CONFLICT (tag) DO NOTHING;
+		INSERT INTO public.lang_versions (tag, name, host, timezone) VALUES ('ru', 'Russia', 'voyna-plemyon.ru', 'Europe/Moscow') ON CONFLICT (tag) DO NOTHING;
+		INSERT INTO public.lang_versions (tag, name, host, timezone) VALUES ('ch', 'Switerzland', 'staemme.ch', 'Europe/Zurich') ON CONFLICT (tag) DO NOTHING;
+	`
 	serverPGFunctions = `
 		CREATE OR REPLACE FUNCTION ?0.log_tribe_change_on_insert()
 			RETURNS trigger AS
