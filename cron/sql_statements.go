@@ -21,8 +21,8 @@ const (
 		INSERT INTO public.special_servers (lang_version_tag, key) VALUES ('ch', 'chs1') ON CONFLICT ON CONSTRAINT special_servers_lang_version_tag_key_key DO NOTHING;
 	`
 	allVersionsPGInsertStatements = `
-		INSERT INTO public.lang_versions (tag, name, host, timezone) VALUES ('pl', 'Polska', 'plemiona.pl', 'Europe/Warsaw') ON CONFLICT (tag) DO NOTHING;
-		INSERT INTO public.lang_versions (tag, name, host, timezone) VALUES ('de', 'Deutschland', 'die-staemme.de', 'Europe/Berlin') ON CONFLICT (tag) DO NOTHING;
+		INSERT INTO public.lang_versions (tag, name, host, timezone) VALUES ('pl', 'Poland', 'plemiona.pl', 'Europe/Warsaw') ON CONFLICT (tag) DO NOTHING;
+		INSERT INTO public.lang_versions (tag, name, host, timezone) VALUES ('de', 'Germany', 'die-staemme.de', 'Europe/Berlin') ON CONFLICT (tag) DO NOTHING;
 		INSERT INTO public.lang_versions (tag, name, host, timezone) VALUES ('uk', 'United Kingdom', 'tribalwars.co.uk', 'Europe/London') ON CONFLICT (tag) DO NOTHING;
 		INSERT INTO public.lang_versions (tag, name, host, timezone) VALUES ('hu', 'Hungary', 'klanhaboru.hu', 'Europe/Budapest') ON CONFLICT (tag) DO NOTHING;
 		INSERT INTO public.lang_versions (tag, name, host, timezone) VALUES ('it', 'Italy', 'tribals.it', 'Europe/Rome') ON CONFLICT (tag) DO NOTHING;
@@ -35,7 +35,7 @@ const (
 		INSERT INTO public.lang_versions (tag, name, host, timezone) VALUES ('br', 'Brazil', 'tribalwars.com.br', 'America/Sao_Paulo') ON CONFLICT (tag) DO NOTHING;
 		INSERT INTO public.lang_versions (tag, name, host, timezone) VALUES ('tr', 'Turkey', 'klanlar.org', 'Europe/Instanbul') ON CONFLICT (tag) DO NOTHING;
 		INSERT INTO public.lang_versions (tag, name, host, timezone) VALUES ('cs', 'Czech Republic', 'divokekmeny.cz', 'Europe/Prague') ON CONFLICT (tag) DO NOTHING;
-		INSERT INTO public.lang_versions (tag, name, host, timezone) VALUES ('en', 'Germany', 'tribalwars.net', 'Europe/London') ON CONFLICT (tag) DO NOTHING;
+		INSERT INTO public.lang_versions (tag, name, host, timezone) VALUES ('en', 'International', 'tribalwars.net', 'Europe/London') ON CONFLICT (tag) DO NOTHING;
 		INSERT INTO public.lang_versions (tag, name, host, timezone) VALUES ('ru', 'Russia', 'voyna-plemyon.ru', 'Europe/Moscow') ON CONFLICT (tag) DO NOTHING;
 		INSERT INTO public.lang_versions (tag, name, host, timezone) VALUES ('ch', 'Switerzland', 'staemme.ch', 'Europe/Zurich') ON CONFLICT (tag) DO NOTHING;
 	`
