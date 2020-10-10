@@ -17,6 +17,8 @@ DB_NAME=your_db_name
 DB_PORT=5432
 DB_HOST=your_db_host
 DB_PASSWORD=your_db_pass
+
+MAX_CONCURRENT_WORKERS=1 #how many servers should update at the same time
 ```
 
 ### Prerequisites

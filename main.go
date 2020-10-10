@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"strconv"
 	"syscall"
 
 	"github.com/tribalwarshelp/shared/mode"
@@ -42,7 +43,8 @@ func main() {
 		cron.SkipIfStillRunning(cron.VerbosePrintfLogger(log.New(os.Stdout, "cron: ", log.LstdFlags))),
 	))
 	if err := _cron.Attach(c, _cron.Config{
-		DB: db,
+		DB:                   db,
+		MaxConcurrentWorkers: mustParseEnvToInt("MAX_CONCURRENT_WORKERS"),
 	}); err != nil {
 		log.Fatal(err)
 	}
@@ -56,4 +58,16 @@ func main() {
 	<-channel
 
 	log.Print("shutting down")
+}
+
+func mustParseEnvToInt(key string) int {
+	str := os.Getenv(key)
+	if str == "" {
+		return 0
+	}
+	i, err := strconv.Atoi(str)
+	if err != nil {
+		return 0
+	}
+	return i
 }

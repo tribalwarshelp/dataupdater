@@ -24,15 +24,21 @@ const (
 )
 
 type handler struct {
-	db *pg.DB
+	db                   *pg.DB
+	maxConcurrentWorkers int
 }
 
 type Config struct {
-	DB *pg.DB
+	DB                   *pg.DB
+	MaxConcurrentWorkers int
 }
 
 func Attach(c *cron.Cron, cfg Config) error {
-	h := &handler{cfg.DB}
+	if cfg.DB == nil {
+		return fmt.Errorf("cfg.DB cannot be nil, expected go-pg database")
+	}
+
+	h := &handler{cfg.DB, cfg.MaxConcurrentWorkers}
 	if err := h.init(); err != nil {
 		return err
 	}
@@ -60,6 +66,10 @@ func Attach(c *cron.Cron, cfg Config) error {
 }
 
 func (h *handler) init() error {
+	if h.maxConcurrentWorkers <= 0 {
+		h.maxConcurrentWorkers = 1
+	}
+
 	tx, err := h.db.Begin()
 	if err != nil {
 		return err
@@ -223,25 +233,36 @@ func (h *handler) updateServersData() {
 		return
 	}
 
+	var wg sync.WaitGroup
+	p := newPool(h.maxConcurrentWorkers)
+	defer p.close()
+
 	for _, server := range servers {
 		url, ok := urls[server.Key]
 		if !ok {
 			log.Printf("No one URL associated with key: %s, skipping...", server.Key)
 			continue
 		}
-
+		p.waitForWorker()
+		wg.Add(1)
 		sh := &updateServerDataWorker{
 			db:      h.db.WithParam("SERVER", pg.Safe(server.Key)),
 			baseURL: url,
 			server:  server,
 		}
-		log.Printf("%s: updating data", server.Key)
-		if err := sh.update(); err != nil {
-			log.Println(errors.Wrap(err, server.Key))
-		} else {
-			log.Printf("%s: data updated", server.Key)
-		}
+		go func(worker *updateServerDataWorker, server *models.Server, url string) {
+			defer p.releaseWorker()
+			defer wg.Done()
+			log.Printf("%s: updating data", server.Key)
+			if err := sh.update(); err != nil {
+				log.Println(errors.Wrap(err, server.Key))
+			} else {
+				log.Printf("%s: data updated", server.Key)
+			}
+		}(sh, server, url)
 	}
+
+	wg.Wait()
 }
 
 func (h *handler) updateHistory() {
@@ -262,22 +283,22 @@ func (h *handler) updateHistory() {
 	defer p.close()
 
 	for _, server := range servers {
-		sh := &updateServerHistoryWorker{
+		p.waitForWorker()
+		wg.Add(1)
+		worker := &updateServerHistoryWorker{
 			db:     h.db.WithParam("SERVER", pg.Safe(server.Key)),
 			server: server,
 		}
-		p.waitForWorker()
-		wg.Add(1)
-		go func(server *models.Server, sh *updateServerHistoryWorker) {
+		go func(server *models.Server, worker *updateServerHistoryWorker) {
 			defer p.releaseWorker()
 			defer wg.Done()
 			log.Printf("%s: updating history", server.Key)
-			if err := sh.update(); err != nil {
+			if err := worker.update(); err != nil {
 				log.Println(errors.Wrap(err, server.Key))
 				return
 			}
 			log.Printf("%s: history updated", server.Key)
-		}(server, sh)
+		}(server, worker)
 	}
 
 	wg.Wait()
@@ -298,22 +319,22 @@ func (h *handler) updateServersStats(t time.Time) error {
 	defer p.close()
 
 	for _, server := range servers {
-		sh := &updateServerStatsWorker{
+		p.waitForWorker()
+		wg.Add(1)
+		worker := &updateServerStatsWorker{
 			db:     h.db.WithParam("SERVER", pg.Safe(server.Key)),
 			server: server,
 		}
-		p.waitForWorker()
-		wg.Add(1)
-		go func(server *models.Server, sh *updateServerStatsWorker) {
+		go func(server *models.Server, worker *updateServerStatsWorker) {
 			defer p.releaseWorker()
 			defer wg.Done()
 			log.Printf("%s: updating stats", server.Key)
-			if err := sh.update(); err != nil {
+			if err := worker.update(); err != nil {
 				log.Println(errors.Wrap(err, server.Key))
 				return
 			}
 			log.Printf("%s: stats updated", server.Key)
-		}(server, sh)
+		}(server, worker)
 	}
 
 	wg.Wait()
@@ -343,21 +364,21 @@ func (h *handler) vacuumDatabase() {
 	defer p.close()
 
 	for _, server := range servers {
-		sh := &vacuumServerDBWorker{
-			db: h.db.WithParam("SERVER", pg.Safe(server.Key)),
-		}
 		p.waitForWorker()
 		wg.Add(1)
-		go func(server *models.Server, sh *vacuumServerDBWorker, p *pool) {
+		worker := &vacuumServerDBWorker{
+			db: h.db.WithParam("SERVER", pg.Safe(server.Key)),
+		}
+		go func(server *models.Server, worker *vacuumServerDBWorker, p *pool) {
 			defer p.releaseWorker()
 			defer wg.Done()
 			log.Printf("%s: vacuuming database", server.Key)
-			if err := sh.vacuum(); err != nil {
+			if err := worker.vacuum(); err != nil {
 				log.Println(errors.Wrap(err, server.Key))
 				return
 			}
 			log.Printf("%s: database vacuumed", server.Key)
-		}(server, sh, p)
+		}(server, worker, p)
 	}
 
 	wg.Wait()
