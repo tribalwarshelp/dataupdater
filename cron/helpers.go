@@ -16,13 +16,19 @@ var client = &http.Client{
 	Timeout: 20 * time.Second,
 }
 
+func newCsvReader(r io.Reader) *csv.Reader {
+	csvReader := csv.NewReader(r)
+	csvReader.LazyQuotes = true
+	return csvReader
+}
+
 func uncompressAndReadCsvLines(r io.Reader) ([][]string, error) {
 	uncompressedStream, err := gzip.NewReader(r)
 	if err != nil {
 		return [][]string{}, err
 	}
 	defer uncompressedStream.Close()
-	return csv.NewReader(uncompressedStream).ReadAll()
+	return newCsvReader(uncompressedStream).ReadAll()
 }
 
 func getCSVData(url string, compressed bool) ([][]string, error) {
@@ -32,7 +38,7 @@ func getCSVData(url string, compressed bool) ([][]string, error) {
 	}
 	defer resp.Body.Close()
 	if !compressed {
-		return csv.NewReader(resp.Body).ReadAll()
+		return newCsvReader(resp.Body).ReadAll()
 	}
 	return uncompressAndReadCsvLines(resp.Body)
 }

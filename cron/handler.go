@@ -145,7 +145,7 @@ func (h *handler) createSchema(server *models.Server) error {
 func (h *handler) getServers() ([]*models.Server, map[string]string, error) {
 	log.Print("Loading servers...")
 	langVersions := []*models.LangVersion{}
-	if err := h.db.Model(&langVersions).Relation("SpecialServers").Select(); err != nil {
+	if err := h.db.Model(&langVersions).Relation("SpecialServers").Order("tag ASC").Select(); err != nil {
 		return nil, nil, errors.Wrap(err, "getServers")
 	}
 
