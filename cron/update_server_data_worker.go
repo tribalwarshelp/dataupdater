@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/tribalwarshelp/shared/models"
@@ -16,23 +17,34 @@ import (
 )
 
 const (
-	endpointConfig         = "/interface.php?func=get_config"
-	endpointUnitConfig     = "/interface.php?func=get_unit_info"
-	endpointBuildingConfig = "/interface.php?func=get_building_info"
-	endpointPlayers        = "/map/player.txt.gz"
-	endpointTribe          = "/map/ally.txt.gz"
-	endpointVillage        = "/map/village.txt.gz"
-	endpointKillAtt        = "/map/kill_att.txt.gz"
-	endpointKillDef        = "/map/kill_def.txt.gz"
-	endpointKillSup        = "/map/kill_sup.txt.gz"
-	endpointKillAll        = "/map/kill_all.txt.gz"
-	endpointKillAttTribe   = "/map/kill_att_tribe.txt.gz"
-	endpointKillDefTribe   = "/map/kill_def_tribe.txt.gz"
-	endpointKillAllTribe   = "/map/kill_all_tribe.txt.gz"
-	endpointConquer        = "/map/conquer.txt.gz"
+	endpointConfig                 = "/interface.php?func=get_config"
+	endpointUnitConfig             = "/interface.php?func=get_unit_info"
+	endpointBuildingConfig         = "/interface.php?func=get_building_info"
+	endpointPlayer                 = "/map/player.txt.gz"
+	endpointPlayerNotGzipped       = "/map/player.txt"
+	endpointTribe                  = "/map/ally.txt.gz"
+	endpointTribeNotGzipped        = "/map/ally.txt"
+	endpointVillage                = "/map/village.txt.gz"
+	endpointVillageNotGzipped      = "/map/village.txt"
+	endpointKillAtt                = "/map/kill_att.txt.gz"
+	endpointKillAttNotGzipped      = "/map/kill_att.txt"
+	endpointKillDef                = "/map/kill_def.txt.gz"
+	endpointKillDefNotGzipped      = "/map/kill_def.txt"
+	endpointKillSup                = "/map/kill_sup.txt.gz"
+	endpointKillSupNotGzipped      = "/map/kill_sup.txt"
+	endpointKillAll                = "/map/kill_all.txt.gz"
+	endpointKillAllNotGzipped      = "/map/kill_all.txt"
+	endpointKillAttTribe           = "/map/kill_att_tribe.txt.gz"
+	endpointKillAttTribeNotGzipped = "/map/kill_att_tribe.txt"
+	endpointKillDefTribe           = "/map/kill_def_tribe.txt.gz"
+	endpointKillDefTribeNotGzipped = "/map/kill_def_tribe.txt"
+	endpointKillAllTribe           = "/map/kill_all_tribe.txt.gz"
+	endpointKillAllTribeNotGzipped = "/map/kill_all_tribe.txt"
+	endpointConquer                = "/map/conquer.txt.gz"
+	endpointConquerNotGzipped      = "/map/conquer.txt"
 )
 
-type updateServerDataHandler struct {
+type updateServerDataWorker struct {
 	baseURL      string
 	db           *pg.DB
 	server       *models.Server
@@ -50,7 +62,7 @@ type parsedODLine struct {
 	Score int
 }
 
-func (h *updateServerDataHandler) parseODLine(line []string) (*parsedODLine, error) {
+func (h *updateServerDataWorker) parseODLine(line []string) (*parsedODLine, error) {
 	if len(line) != 3 {
 		return nil, fmt.Errorf("Invalid line format (should be rank,id,score)")
 	}
@@ -71,7 +83,7 @@ func (h *updateServerDataHandler) parseODLine(line []string) (*parsedODLine, err
 	return p, nil
 }
 
-func (h *updateServerDataHandler) getOD(tribe bool) (map[int]*models.OpponentsDefeated, error) {
+func (h *updateServerDataWorker) loadOD(tribe bool) (map[int]*models.OpponentsDefeated, error) {
 	m := make(map[int]*models.OpponentsDefeated)
 	urls := []string{
 		fmt.Sprintf("%s%s", h.baseURL, endpointKillAll),
@@ -93,7 +105,11 @@ func (h *updateServerDataHandler) getOD(tribe bool) (map[int]*models.OpponentsDe
 		}
 		lines, err := getCSVData(url, true)
 		if err != nil {
-			return nil, errors.Wrapf(err, "unable to get data, url %s", url)
+			//fallback to not gzipped file
+			lines, err = getCSVData(strings.ReplaceAll(url, ".gz", ""), false)
+			if err != nil {
+				return nil, errors.Wrapf(err, "unable to get data, url %s", url)
+			}
 		}
 		for _, line := range lines {
 			parsed, err := h.parseODLine(line)
@@ -122,7 +138,7 @@ func (h *updateServerDataHandler) getOD(tribe bool) (map[int]*models.OpponentsDe
 	return m, nil
 }
 
-func (h *updateServerDataHandler) parsePlayerLine(line []string) (*models.Player, error) {
+func (h *updateServerDataWorker) parsePlayerLine(line []string) (*models.Player, error) {
 	if len(line) != 6 {
 		return nil, fmt.Errorf("Invalid line format (should be id,name,tribeid,villages,points,rank)")
 	}
@@ -160,15 +176,18 @@ func (h *updateServerDataHandler) parsePlayerLine(line []string) (*models.Player
 	return player, nil
 }
 
-func (h *updateServerDataHandler) getPlayers(od map[int]*models.OpponentsDefeated,
+func (h *updateServerDataWorker) loadPlayers(od map[int]*models.OpponentsDefeated,
 	firstEnnoblementByID map[int]*models.Ennoblement) ([]*models.Player, error) {
-	url := h.baseURL + endpointPlayers
+	url := h.baseURL + endpointPlayer
 	lines, err := getCSVData(url, true)
 	if err != nil {
-		return nil, errors.Wrapf(err, "unable to get data, url %s", url)
+		lines, err = getCSVData(h.baseURL+endpointPlayerNotGzipped, false)
+		if err != nil {
+			return nil, errors.Wrapf(err, "unable to get data, url %s", url)
+		}
 	}
-	now := time.Now()
 
+	now := time.Now()
 	players := []*models.Player{}
 	for _, line := range lines {
 		player, err := h.parsePlayerLine(line)
@@ -190,7 +209,7 @@ func (h *updateServerDataHandler) getPlayers(od map[int]*models.OpponentsDefeate
 	return players, nil
 }
 
-func (h *updateServerDataHandler) parseTribeLine(line []string) (*models.Tribe, error) {
+func (h *updateServerDataWorker) parseTribeLine(line []string) (*models.Tribe, error) {
 	if len(line) != 8 {
 		return nil, fmt.Errorf("Invalid line format (should be id,name,tag,members,villages,points,allpoints,rank)")
 	}
@@ -236,11 +255,14 @@ func (h *updateServerDataHandler) parseTribeLine(line []string) (*models.Tribe, 
 	return tribe, nil
 }
 
-func (h *updateServerDataHandler) getTribes(od map[int]*models.OpponentsDefeated, numberOfVillages int) ([]*models.Tribe, error) {
+func (h *updateServerDataWorker) loadTribes(od map[int]*models.OpponentsDefeated, numberOfVillages int) ([]*models.Tribe, error) {
 	url := h.baseURL + endpointTribe
 	lines, err := getCSVData(url, true)
 	if err != nil {
-		return nil, errors.Wrapf(err, "unable to get data, url %s", url)
+		lines, err = getCSVData(h.baseURL+endpointTribeNotGzipped, false)
+		if err != nil {
+			return nil, errors.Wrapf(err, "unable to get data, url %s", url)
+		}
 	}
 	tribes := []*models.Tribe{}
 	for _, line := range lines {
@@ -262,7 +284,7 @@ func (h *updateServerDataHandler) getTribes(od map[int]*models.OpponentsDefeated
 	return tribes, nil
 }
 
-func (h *updateServerDataHandler) parseVillageLine(line []string) (*models.Village, error) {
+func (h *updateServerDataWorker) parseVillageLine(line []string) (*models.Village, error) {
 	if len(line) != 7 {
 		return nil, fmt.Errorf("Invalid line format (should be id,name,x,y,playerID,points,bonus)")
 	}
@@ -299,11 +321,14 @@ func (h *updateServerDataHandler) parseVillageLine(line []string) (*models.Villa
 	return village, nil
 }
 
-func (h *updateServerDataHandler) getVillages() ([]*models.Village, error) {
+func (h *updateServerDataWorker) loadVillages() ([]*models.Village, error) {
 	url := h.baseURL + endpointVillage
 	lines, err := getCSVData(url, true)
 	if err != nil {
-		return nil, errors.Wrapf(err, "unable to get data, url %s", url)
+		lines, err = getCSVData(h.baseURL+endpointVillageNotGzipped, false)
+		if err != nil {
+			return nil, errors.Wrapf(err, "unable to get data, url %s", url)
+		}
 	}
 	villages := []*models.Village{}
 	for _, line := range lines {
@@ -316,7 +341,7 @@ func (h *updateServerDataHandler) getVillages() ([]*models.Village, error) {
 	return villages, nil
 }
 
-func (h *updateServerDataHandler) parseEnnoblementLine(line []string) (*models.Ennoblement, error) {
+func (h *updateServerDataWorker) parseEnnoblementLine(line []string) (*models.Ennoblement, error) {
 	if len(line) != 4 {
 		return nil, fmt.Errorf("Invalid line format (should be village_id,timestamp,new_owner_id,old_owner_id)")
 	}
@@ -343,11 +368,14 @@ func (h *updateServerDataHandler) parseEnnoblementLine(line []string) (*models.E
 	return ennoblement, nil
 }
 
-func (h *updateServerDataHandler) getEnnoblements() ([]*models.Ennoblement, map[int]*models.Ennoblement, error) {
+func (h *updateServerDataWorker) loadEnnoblements() ([]*models.Ennoblement, map[int]*models.Ennoblement, error) {
 	url := h.baseURL + endpointConquer
 	lines, err := getCSVData(url, true)
 	if err != nil {
-		return nil, nil, errors.Wrapf(err, "unable to get data, url %s", url)
+		lines, err = getCSVData(h.baseURL+endpointConquerNotGzipped, false)
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "unable to get data, url %s", url)
+		}
 	}
 
 	lastEnnoblement := &models.Ennoblement{}
@@ -377,7 +405,7 @@ func (h *updateServerDataHandler) getEnnoblements() ([]*models.Ennoblement, map[
 	return ennoblements, firstEnnoblementByID, nil
 }
 
-func (h *updateServerDataHandler) getConfig() (*models.ServerConfig, error) {
+func (h *updateServerDataWorker) getConfig() (*models.ServerConfig, error) {
 	url := h.baseURL + endpointConfig
 	cfg := &models.ServerConfig{}
 	err := getXML(url, cfg)
@@ -387,7 +415,7 @@ func (h *updateServerDataHandler) getConfig() (*models.ServerConfig, error) {
 	return cfg, nil
 }
 
-func (h *updateServerDataHandler) getBuildingConfig() (*models.BuildingConfig, error) {
+func (h *updateServerDataWorker) getBuildingConfig() (*models.BuildingConfig, error) {
 	url := h.baseURL + endpointBuildingConfig
 	cfg := &models.BuildingConfig{}
 	err := getXML(url, cfg)
@@ -397,7 +425,7 @@ func (h *updateServerDataHandler) getBuildingConfig() (*models.BuildingConfig, e
 	return cfg, nil
 }
 
-func (h *updateServerDataHandler) getUnitConfig() (*models.UnitConfig, error) {
+func (h *updateServerDataWorker) getUnitConfig() (*models.UnitConfig, error) {
 	url := h.baseURL + endpointUnitConfig
 	cfg := &models.UnitConfig{}
 	err := getXML(url, cfg)
@@ -407,13 +435,13 @@ func (h *updateServerDataHandler) getUnitConfig() (*models.UnitConfig, error) {
 	return cfg, nil
 }
 
-func (h *updateServerDataHandler) isTheSameAsServerHistoryUpdatedAt(t time.Time) bool {
+func (h *updateServerDataWorker) isTheSameAsServerHistoryUpdatedAt(t time.Time) bool {
 	return t.Year() == h.server.HistoryUpdatedAt.Year() &&
 		t.Month() == h.server.HistoryUpdatedAt.Month() &&
 		t.Day() == h.server.HistoryUpdatedAt.Day()
 }
 
-func (h *updateServerDataHandler) calculateODifference(od1 models.OpponentsDefeated, od2 models.OpponentsDefeated) models.OpponentsDefeated {
+func (h *updateServerDataWorker) calculateODifference(od1 models.OpponentsDefeated, od2 models.OpponentsDefeated) models.OpponentsDefeated {
 	return models.OpponentsDefeated{
 		RankAtt:    (od1.RankAtt - od2.RankAtt) * -1,
 		ScoreAtt:   od1.ScoreAtt - od2.ScoreAtt,
@@ -426,7 +454,7 @@ func (h *updateServerDataHandler) calculateODifference(od1 models.OpponentsDefea
 	}
 }
 
-func (h *updateServerDataHandler) calculateDailyTribeStats(tribes []*models.Tribe,
+func (h *updateServerDataWorker) calculateDailyTribeStats(tribes []*models.Tribe,
 	history []*models.TribeHistory) []*models.DailyTribeStats {
 	dailyStats := []*models.DailyTribeStats{}
 	searchableTribes := makeTribesSearchable(tribes)
@@ -454,7 +482,7 @@ func (h *updateServerDataHandler) calculateDailyTribeStats(tribes []*models.Trib
 	return dailyStats
 }
 
-func (h *updateServerDataHandler) calculateDailyPlayerStats(players []*models.Player,
+func (h *updateServerDataWorker) calculateDailyPlayerStats(players []*models.Player,
 	history []*models.PlayerHistory) []*models.DailyPlayerStats {
 	dailyStats := []*models.DailyPlayerStats{}
 	searchablePlayers := makePlayersSearchable(players)
@@ -479,34 +507,34 @@ func (h *updateServerDataHandler) calculateDailyPlayerStats(players []*models.Pl
 	return dailyStats
 }
 
-func (h *updateServerDataHandler) update() error {
-	pod, err := h.getOD(false)
+func (h *updateServerDataWorker) update() error {
+	pod, err := h.loadOD(false)
 	if err != nil {
 		return err
 	}
-	tod, err := h.getOD(true)
-	if err != nil {
-		return err
-	}
-
-	ennoblements, firstEnnoblementByID, err := h.getEnnoblements()
+	tod, err := h.loadOD(true)
 	if err != nil {
 		return err
 	}
 
-	villages, err := h.getVillages()
+	ennoblements, firstEnnoblementByID, err := h.loadEnnoblements()
+	if err != nil {
+		return err
+	}
+
+	villages, err := h.loadVillages()
 	if err != nil {
 		return err
 	}
 	numberOfVillages := len(villages)
 
-	tribes, err := h.getTribes(tod, countPlayerVillages(villages))
+	tribes, err := h.loadTribes(tod, countPlayerVillages(villages))
 	if err != nil {
 		return err
 	}
 	numberOfTribes := len(tribes)
 
-	players, err := h.getPlayers(pod, firstEnnoblementByID)
+	players, err := h.loadPlayers(pod, firstEnnoblementByID)
 	if err != nil {
 		return err
 	}
@@ -549,7 +577,7 @@ func (h *updateServerDataHandler) update() error {
 				Set("rank = EXCLUDED.rank").
 				Set("exists = EXCLUDED.exists").
 				Set("dominance = EXCLUDED.dominance").
-				Apply(attachODSetClauses).
+				Apply(appendODSetClauses).
 				Insert(); err != nil {
 				return errors.Wrap(err, "cannot insert tribes")
 			}
@@ -583,7 +611,7 @@ func (h *updateServerDataHandler) update() error {
 					Set("all_points = EXCLUDED.all_points").
 					Set("rank = EXCLUDED.rank").
 					Set("dominance = EXCLUDED.dominance").
-					Apply(attachODSetClauses).
+					Apply(appendODSetClauses).
 					Insert(); err != nil {
 					return errors.Wrap(err, "cannot insert today's tribes stats")
 				}
@@ -611,7 +639,7 @@ func (h *updateServerDataHandler) update() error {
 				Set("exists = EXCLUDED.exists").
 				Set("tribe_id = EXCLUDED.tribe_id").
 				Set("daily_growth = EXCLUDED.daily_growth").
-				Apply(attachODSetClauses).
+				Apply(appendODSetClauses).
 				Insert(); err != nil {
 				return errors.Wrap(err, "cannot insert players")
 			}
@@ -646,7 +674,7 @@ func (h *updateServerDataHandler) update() error {
 					Set("villages = EXCLUDED.villages").
 					Set("points = EXCLUDED.points").
 					Set("rank = EXCLUDED.rank").
-					Apply(attachODSetClauses).
+					Apply(appendODSetClauses).
 					Insert(); err != nil {
 					return errors.Wrap(err, "cannot insert today's players stats")
 				}
@@ -710,7 +738,7 @@ func (h *updateServerDataHandler) update() error {
 	return nil
 }
 
-func attachODSetClauses(q *orm.Query) (*orm.Query, error) {
+func appendODSetClauses(q *orm.Query) (*orm.Query, error) {
 	return q.Set("rank_att = EXCLUDED.rank_att").
 			Set("score_att = EXCLUDED.score_att").
 			Set("rank_def = EXCLUDED.rank_def").

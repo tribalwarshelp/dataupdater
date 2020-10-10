@@ -8,12 +8,12 @@ import (
 	"github.com/tribalwarshelp/shared/models"
 )
 
-type updateServerStatsHandler struct {
+type updateServerStatsWorker struct {
 	db     *pg.DB
 	server *models.Server
 }
 
-func (h *updateServerStatsHandler) prepare() (*models.ServerStats, error) {
+func (h *updateServerStatsWorker) prepare() (*models.ServerStats, error) {
 	activePlayers, err := h.db.Model(&models.Player{}).Where("exists = true").Count()
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot count active players")
@@ -67,7 +67,7 @@ func (h *updateServerStatsHandler) prepare() (*models.ServerStats, error) {
 	}, nil
 }
 
-func (h *updateServerStatsHandler) update() error {
+func (h *updateServerStatsWorker) update() error {
 	stats, err := h.prepare()
 	if err != nil {
 		return err

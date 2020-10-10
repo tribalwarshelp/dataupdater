@@ -5,6 +5,7 @@ const (
 		INSERT INTO public.special_servers (lang_version_tag, key) VALUES ('pl', 'pls1') ON CONFLICT ON CONSTRAINT special_servers_lang_version_tag_key_key DO NOTHING;
 		INSERT INTO public.special_servers (lang_version_tag, key) VALUES ('en', 'ens1') ON CONFLICT ON CONSTRAINT special_servers_lang_version_tag_key_key DO NOTHING;
 		INSERT INTO public.special_servers (lang_version_tag, key) VALUES ('uk', 'uks1') ON CONFLICT ON CONSTRAINT special_servers_lang_version_tag_key_key DO NOTHING;
+		INSERT INTO public.special_servers (lang_version_tag, key) VALUES ('uk', 'master') ON CONFLICT ON CONSTRAINT special_servers_lang_version_tag_key_key DO NOTHING;
 		INSERT INTO public.special_servers (lang_version_tag, key) VALUES ('it', 'its1') ON CONFLICT ON CONSTRAINT special_servers_lang_version_tag_key_key DO NOTHING;
 		INSERT INTO public.special_servers (lang_version_tag, key) VALUES ('hu', 'hus1') ON CONFLICT ON CONSTRAINT special_servers_lang_version_tag_key_key DO NOTHING;
 		INSERT INTO public.special_servers (lang_version_tag, key) VALUES ('fr', 'frs1') ON CONFLICT ON CONSTRAINT special_servers_lang_version_tag_key_key DO NOTHING;

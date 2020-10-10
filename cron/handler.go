@@ -230,7 +230,7 @@ func (h *handler) updateServersData() {
 			continue
 		}
 
-		sh := &updateServerDataHandler{
+		sh := &updateServerDataWorker{
 			db:      h.db.WithParam("SERVER", pg.Safe(server.Key)),
 			baseURL: url,
 			server:  server,
@@ -266,13 +266,13 @@ func (h *handler) updateServerHistory() {
 			wg.Wait()
 			count = 0
 		}
-		sh := &updateServerHistoryHandler{
+		sh := &updateServerHistoryWorker{
 			db:     h.db.WithParam("SERVER", pg.Safe(server.Key)),
 			server: server,
 		}
 		count++
 		wg.Add(1)
-		go func(server *models.Server, sh *updateServerHistoryHandler) {
+		go func(server *models.Server, sh *updateServerHistoryWorker) {
 			defer wg.Done()
 			log.Printf("%s: updating history", server.Key)
 			if err := sh.update(); err != nil {
@@ -306,13 +306,13 @@ func (h *handler) updateServersStats(t time.Time) error {
 			wg.Wait()
 			count = 0
 		}
-		sh := &updateServerStatsHandler{
+		sh := &updateServerStatsWorker{
 			db:     h.db.WithParam("SERVER", pg.Safe(server.Key)),
 			server: server,
 		}
 		count++
 		wg.Add(1)
-		go func(server *models.Server, sh *updateServerStatsHandler) {
+		go func(server *models.Server, sh *updateServerStatsWorker) {
 			defer wg.Done()
 			log.Printf("%s: updating stats", server.Key)
 			if err := sh.update(); err != nil {
@@ -356,12 +356,12 @@ func (h *handler) vacuumDatabase() {
 			wg.Wait()
 			count = 0
 		}
-		sh := &vacuumServerDBHandler{
+		sh := &vacuumServerDBWorker{
 			db: h.db.WithParam("SERVER", pg.Safe(server.Key)),
 		}
 		count++
 		wg.Add(1)
-		go func(server *models.Server, sh *vacuumServerDBHandler) {
+		go func(server *models.Server, sh *vacuumServerDBWorker) {
 			defer wg.Done()
 			log.Printf("%s: vacuuming database", server.Key)
 			if err := sh.vacuum(); err != nil {

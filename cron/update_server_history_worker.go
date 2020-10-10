@@ -8,12 +8,12 @@ import (
 	"github.com/tribalwarshelp/shared/models"
 )
 
-type updateServerHistoryHandler struct {
+type updateServerHistoryWorker struct {
 	db     *pg.DB
 	server *models.Server
 }
 
-func (h *updateServerHistoryHandler) update() error {
+func (h *updateServerHistoryWorker) update() error {
 	players := []*models.Player{}
 	if err := h.db.Model(&players).Where("exists = true").Select(); err != nil {
 		return errors.Wrap(err, "cannot load players")

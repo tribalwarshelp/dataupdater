@@ -8,11 +8,11 @@ import (
 	"github.com/tribalwarshelp/shared/models"
 )
 
-type vacuumServerDBHandler struct {
+type vacuumServerDBWorker struct {
 	db *pg.DB
 }
 
-func (h *vacuumServerDBHandler) vacuum() error {
+func (h *vacuumServerDBWorker) vacuum() error {
 	tx, err := h.db.Begin()
 	if err != nil {
 		return err
