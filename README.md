@@ -2,10 +2,10 @@
 
 Features:
 
-- Add automatically new TribalWars servers.
-- Fetch TribalWars servers data (players, tribes, ODA, ODD, ODS, OD, conquers, configs).
-- Save daily player/tribe stats, player/tribe history, tribe changes, player name changes, server stats.
-- Vacuum the database daily from old player/tribe stats, player/tribe history.
+- Adds automatically new TribalWars servers.
+- Fetches TribalWars servers data (players, tribes, ODA, ODD, ODS, OD, conquers, configs).
+- Saves daily player/tribe stats, player/tribe history, tribe changes, player name changes, server stats.
+- Vacuums the database daily from old player/tribe stats, player/tribe history.
 
 ## Development
 
