@@ -44,9 +44,9 @@ func Attach(c *cron.Cron, cfg Config) error {
 	}
 	go func() {
 		updateServerData()
-		// vacuumDatabase()
-		// updateHistory()
-		// updateStats()
+		vacuumDatabase()
+		updateHistory()
+		updateStats()
 	}()
 
 	return nil
