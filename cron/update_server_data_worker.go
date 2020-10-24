@@ -675,7 +675,6 @@ func (h *updateServerDataWorker) update() error {
 		if _, err := tx.Model(&ennoblements).Insert(); err != nil {
 			return errors.Wrap(err, "couldnt insert ennoblements")
 		}
-		return nil
 	}
 
 	if _, err := tx.Model(h.server).
@@ -692,7 +691,12 @@ func (h *updateServerDataWorker) update() error {
 		return errors.Wrap(err, "couldnt update server")
 	}
 
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		log.Println(h.server, err)
+		return err
+	}
+
+	return nil
 }
 
 func appendODSetClauses(q *orm.Query) (*orm.Query, error) {
