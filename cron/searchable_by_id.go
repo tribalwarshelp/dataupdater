@@ -2,57 +2,62 @@ package cron
 
 import "github.com/tribalwarshelp/shared/models"
 
-type tribeSearchableByID struct {
-	*models.Tribe
+type tribesSearchableByID struct {
+	tribes []*models.Tribe
 }
 
-func (t tribeSearchableByID) ID() int {
-	return t.Tribe.ID
+func (searchable tribesSearchableByID) GetID(index int) int {
+	return searchable.tribes[index].ID
 }
 
-type playerSearchableByID struct {
-	*models.Player
+func (searchable tribesSearchableByID) Len() int {
+	return len(searchable.tribes)
 }
 
-func (t playerSearchableByID) ID() int {
-	return t.Player.ID
+type playersSearchableByID struct {
+	players []*models.Player
+}
+
+func (searchable playersSearchableByID) GetID(index int) int {
+	return searchable.players[index].ID
+}
+
+func (searchable playersSearchableByID) Len() int {
+	return len(searchable.players)
 }
 
 type searchableByID interface {
-	ID() int
+	GetID(index int) int
+	Len() int
 }
 
-func makePlayersSearchable(players []*models.Player) []searchableByID {
-	searchable := []searchableByID{}
-	for _, player := range players {
-		searchable = append(searchable, playerSearchableByID{player})
+func makePlayersSearchable(players []*models.Player) searchableByID {
+	return playersSearchableByID{
+		players: players,
 	}
-	return searchable
 }
 
-func makeTribesSearchable(tribes []*models.Tribe) []searchableByID {
-	searchable := []searchableByID{}
-	for _, tribe := range tribes {
-		searchable = append(searchable, tribeSearchableByID{tribe})
+func makeTribesSearchable(tribes []*models.Tribe) searchableByID {
+	return tribesSearchableByID{
+		tribes: tribes,
 	}
-	return searchable
 }
 
-func searchByID(haystack []searchableByID, id int) int {
+func searchByID(haystack searchableByID, id int) int {
 	low := 0
-	high := len(haystack) - 1
+	high := haystack.Len() - 1
 
 	for low <= high {
 		median := (low + high) / 2
 
-		if haystack[median].ID() < id {
+		if haystack.GetID(median) < id {
 			low = median + 1
 		} else {
 			high = median - 1
 		}
 	}
 
-	if low == len(haystack) || haystack[low].ID() != id {
+	if low == haystack.Len() || haystack.GetID(low) != id {
 		return 0
 	}
 

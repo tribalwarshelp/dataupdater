@@ -2,7 +2,8 @@ package cron
 
 import (
 	"fmt"
-	"time"
+
+	"github.com/tribalwarshelp/shared/utils"
 
 	"github.com/go-pg/pg/v10"
 	"github.com/robfig/cron/v3"
@@ -26,10 +27,10 @@ func Attach(c *cron.Cron, cfg Config) error {
 		return err
 	}
 
-	updateServerData := trackExecutionTime(h.updateServerData, "updateServerData")
-	updateHistory := trackExecutionTime(h.updateHistory, "updateHistory")
-	vacuumDatabase := trackExecutionTime(h.vacuumDatabase, "vacuumDatabase")
-	updateStats := trackExecutionTime(h.updateStats, "updateStats")
+	updateServerData := utils.TrackExecutionTime(log, h.updateServerData, "updateServerData")
+	updateHistory := utils.TrackExecutionTime(log, h.updateHistory, "updateHistory")
+	vacuumDatabase := utils.TrackExecutionTime(log, h.vacuumDatabase, "vacuumDatabase")
+	updateStats := utils.TrackExecutionTime(log, h.updateStats, "updateStats")
 	if _, err := c.AddFunc("0 * * * *", updateServerData); err != nil {
 		return err
 	}
@@ -50,18 +51,4 @@ func Attach(c *cron.Cron, cfg Config) error {
 	}()
 
 	return nil
-}
-
-func trackExecutionTime(fn func(), fnName string) func() {
-	return func() {
-		now := time.Now()
-		log := log.WithField("fnName", fnName)
-		log.Infof("%s: called", fnName)
-
-		fn()
-
-		log.
-			WithField("executionTime", time.Since(now).String()).
-			Infof("%s: finished executing", fnName)
-	}
 }

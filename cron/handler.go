@@ -194,7 +194,7 @@ func (h *handler) updateServerData() {
 	}
 	log.
 		WithField("numberOfServers", len(servers)).
-		Info("updateServerData: loaded servers")
+		Info("updateServerData: servers loaded")
 
 	var wg sync.WaitGroup
 	p := newPool(h.maxConcurrentWorkers)
@@ -244,7 +244,7 @@ func (h *handler) updateHistory() {
 	}
 	log.
 		WithField("numberOfServers", len(servers)).
-		Info("updateHistory: loaded servers")
+		Info("updateHistory: servers loaded")
 
 	var wg sync.WaitGroup
 	p := newPool(runtime.NumCPU())
@@ -282,7 +282,7 @@ func (h *handler) updateServerStats(t time.Time) error {
 	if err != nil {
 		return errors.Wrap(err, "updateServerStats")
 	}
-	log.WithField("numberOfServers", len(servers)).Info("updateServerStats: loaded servers")
+	log.WithField("numberOfServers", len(servers)).Info("updateServerStats: servers loaded")
 
 	var wg sync.WaitGroup
 	p := newPool(runtime.NumCPU())
