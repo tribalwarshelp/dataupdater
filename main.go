@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"syscall"
 
+	"github.com/sirupsen/logrus"
 	"github.com/tribalwarshelp/shared/mode"
 
 	_cron "github.com/tribalwarshelp/cron/cron"
@@ -23,21 +24,33 @@ func init() {
 	if mode.Get() == mode.DevelopmentMode {
 		godotenv.Load(".env.development")
 	}
+
+	customFormatter := new(logrus.TextFormatter)
+	customFormatter.TimestampFormat = "2006-01-02 15:04:05"
+	customFormatter.FullTimestamp = true
+	logrus.SetFormatter(customFormatter)
 }
 
 func main() {
-	db := pg.Connect(&pg.Options{
+	dbOptions := &pg.Options{
 		User:     os.Getenv("DB_USER"),
 		Password: os.Getenv("DB_PASSWORD"),
 		Database: os.Getenv("DB_NAME"),
 		Addr:     os.Getenv("DB_HOST") + ":" + os.Getenv("DB_PORT"),
 		PoolSize: runtime.NumCPU() * 5,
-	})
+	}
+	dbFields := logrus.Fields{
+		"user":     dbOptions.User,
+		"database": dbOptions.Database,
+		"addr":     dbOptions.Addr,
+	}
+	db := pg.Connect(dbOptions)
 	defer func() {
 		if err := db.Close(); err != nil {
-			log.Fatal(err)
+			logrus.WithFields(dbFields).Fatalln(err)
 		}
 	}()
+	logrus.WithFields(dbFields).Info("Connected to the database")
 
 	c := cron.New(cron.WithChain(
 		cron.SkipIfStillRunning(cron.VerbosePrintfLogger(log.New(os.Stdout, "cron: ", log.LstdFlags))),
@@ -46,18 +59,18 @@ func main() {
 		DB:                   db,
 		MaxConcurrentWorkers: mustParseEnvToInt("MAX_CONCURRENT_WORKERS"),
 	}); err != nil {
-		log.Fatal(err)
+		logrus.Fatal(err)
 	}
 	c.Start()
 	defer c.Stop()
 
-	log.Print("Cron is running!")
+	logrus.Info("Cron is running!")
 
 	channel := make(chan os.Signal, 1)
 	signal.Notify(channel, os.Interrupt, os.Kill, syscall.SIGTERM, syscall.SIGINT)
 	<-channel
 
-	log.Print("shutting down")
+	logrus.Info("shutting down")
 }
 
 func mustParseEnvToInt(key string) int {

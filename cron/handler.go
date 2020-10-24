@@ -3,16 +3,15 @@ package cron
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"runtime"
 	"sync"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"github.com/tribalwarshelp/shared/models"
 
 	phpserialize "github.com/Kichiyaki/go-php-serialize"
-	"github.com/robfig/cron/v3"
 
 	"github.com/go-pg/pg/v10"
 	"github.com/go-pg/pg/v10/orm"
@@ -26,43 +25,6 @@ const (
 type handler struct {
 	db                   *pg.DB
 	maxConcurrentWorkers int
-}
-
-type Config struct {
-	DB                   *pg.DB
-	MaxConcurrentWorkers int
-}
-
-func Attach(c *cron.Cron, cfg Config) error {
-	if cfg.DB == nil {
-		return fmt.Errorf("cfg.DB cannot be nil, expected go-pg database")
-	}
-
-	h := &handler{cfg.DB, cfg.MaxConcurrentWorkers}
-	if err := h.init(); err != nil {
-		return err
-	}
-
-	if _, err := c.AddFunc("0 * * * *", h.updateServersData); err != nil {
-		return err
-	}
-	if _, err := c.AddFunc("30 0 * * *", h.updateHistory); err != nil {
-		return err
-	}
-	if _, err := c.AddFunc("30 1 * * *", h.vacuumDatabase); err != nil {
-		return err
-	}
-	if _, err := c.AddFunc("30 2 * * *", h.updateStats); err != nil {
-		return err
-	}
-	go func() {
-		h.updateServersData()
-		h.vacuumDatabase()
-		h.updateHistory()
-		h.updateStats()
-	}()
-
-	return nil
 }
 
 func (h *handler) init() error {
@@ -85,7 +47,7 @@ func (h *handler) init() error {
 	}
 
 	for _, model := range models {
-		err := tx.CreateTable(model, &orm.CreateTableOptions{
+		err := tx.Model(model).CreateTable(&orm.CreateTableOptions{
 			IfNotExists: true,
 		})
 		if err != nil {
@@ -131,7 +93,7 @@ func (h *handler) createSchema(server *models.Server) error {
 	}
 
 	for _, model := range models {
-		err := tx.CreateTable(model, &orm.CreateTableOptions{
+		err := tx.Model(model).CreateTable(&orm.CreateTableOptions{
 			IfNotExists: true,
 		})
 		if err != nil {
@@ -153,7 +115,6 @@ func (h *handler) createSchema(server *models.Server) error {
 }
 
 func (h *handler) getServers() ([]*models.Server, map[string]string, error) {
-	log.Print("Loading servers...")
 	langVersions := []*models.LangVersion{}
 	if err := h.db.Model(&langVersions).Relation("SpecialServers").Order("tag ASC").Select(); err != nil {
 		return nil, nil, errors.Wrap(err, "getServers")
@@ -164,20 +125,22 @@ func (h *handler) getServers() ([]*models.Server, map[string]string, error) {
 	urls := make(map[string]string)
 	loadedLangVersions := []models.LanguageTag{}
 	for _, langVersion := range langVersions {
+		log := log.WithField("host", langVersion.Host)
+		log.Infof("Loading servers from %s", langVersion.Host)
 		resp, err := http.Get(fmt.Sprintf("https://%s%s", langVersion.Host, endpointGetServers))
 		if err != nil {
-			log.Print(errors.Wrapf(err, "Cannot fetch servers from %s", langVersion.Host))
+			log.Errorln(errors.Wrapf(err, "Cannot fetch servers from %s", langVersion.Host))
 			continue
 		}
 		defer resp.Body.Close()
 		bodyBytes, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			log.Print(errors.Wrapf(err, "Cannot read response body from %s", langVersion.Host))
+			log.Errorln(errors.Wrapf(err, "Cannot read response body from %s", langVersion.Host))
 			continue
 		}
 		body, err := phpserialize.Decode(string(bodyBytes))
 		if err != nil {
-			log.Print(errors.Wrapf(err, "Cannot serialize body from %s into go value", langVersion.Host))
+			log.Errorln(errors.Wrapf(err, "Cannot serialize body from %s into go value", langVersion.Host))
 			continue
 		}
 		for serverKey, url := range body.(map[interface{}]interface{}) {
@@ -192,14 +155,13 @@ func (h *handler) getServers() ([]*models.Server, map[string]string, error) {
 				LangVersion:    langVersion,
 			}
 			if err := h.createSchema(server); err != nil {
-				log.Print(errors.Wrapf(err, "Cannot create schema for %s", serverKey))
+				log.WithField("serverKey", serverKey).Errorln(errors.Wrapf(err, "Cannot create schema for %s", serverKey))
 				continue
 			}
 			serverKeys = append(serverKeys, serverKeyStr)
 			urls[serverKeyStr] = url.(string)
 			servers = append(servers, server)
 		}
-
 		loadedLangVersions = append(loadedLangVersions, langVersion.Tag)
 	}
 
@@ -221,26 +183,28 @@ func (h *handler) getServers() ([]*models.Server, map[string]string, error) {
 		return nil, nil, err
 	}
 
-	log.Print("Servers loaded!")
-
 	return servers, urls, nil
 }
 
-func (h *handler) updateServersData() {
+func (h *handler) updateServerData() {
 	servers, urls, err := h.getServers()
 	if err != nil {
-		log.Println(err.Error())
+		log.Errorln("updateServerData:", err.Error())
 		return
 	}
+	log.
+		WithField("numberOfServers", len(servers)).
+		Info("updateServerData: loaded servers")
 
 	var wg sync.WaitGroup
 	p := newPool(h.maxConcurrentWorkers)
 	defer p.close()
 
 	for _, server := range servers {
+		log := log.WithField("serverKey", server.Key)
 		url, ok := urls[server.Key]
 		if !ok {
-			log.Printf("No one URL associated with key: %s, skipping...", server.Key)
+			log.Warnf("No one URL associated with key: %s, skipping...", server.Key)
 			continue
 		}
 		p.waitForWorker()
@@ -250,16 +214,17 @@ func (h *handler) updateServersData() {
 			baseURL: url,
 			server:  server,
 		}
-		go func(worker *updateServerDataWorker, server *models.Server, url string) {
+		go func(worker *updateServerDataWorker, server *models.Server, url string, log *logrus.Entry) {
 			defer p.releaseWorker()
 			defer wg.Done()
-			log.Printf("%s: updating data", server.Key)
-			if err := sh.update(); err != nil {
-				log.Println(errors.Wrap(err, server.Key))
-			} else {
-				log.Printf("%s: data updated", server.Key)
+			log.Infof("updateServerData: %s: updating data", server.Key)
+			err := sh.update()
+			if err != nil {
+				log.Errorln("updateServerData:", errors.Wrap(err, server.Key))
+				return
 			}
-		}(sh, server, url)
+			log.Infof("updateServerData: %s: data updated", server.Key)
+		}(sh, server, url, log)
 	}
 
 	wg.Wait()
@@ -274,9 +239,12 @@ func (h *handler) updateHistory() {
 		Where("status = ? AND (history_updated_at < ? OR history_updated_at IS NULL)", models.ServerStatusOpen, t1).
 		Select()
 	if err != nil {
-		log.Println(errors.Wrap(err, "updateHistory"))
+		log.Errorln(errors.Wrap(err, "updateHistory"))
 		return
 	}
+	log.
+		WithField("numberOfServers", len(servers)).
+		Info("updateHistory: loaded servers")
 
 	var wg sync.WaitGroup
 	p := newPool(runtime.NumCPU())
@@ -292,27 +260,29 @@ func (h *handler) updateHistory() {
 		go func(server *models.Server, worker *updateServerHistoryWorker) {
 			defer p.releaseWorker()
 			defer wg.Done()
-			log.Printf("%s: updating history", server.Key)
+			log := log.WithField("serverKey", server.Key)
+			log.Infof("updateHistory: %s: updating history", server.Key)
 			if err := worker.update(); err != nil {
-				log.Println(errors.Wrap(err, server.Key))
+				log.Errorln("updateHistory:", errors.Wrap(err, server.Key))
 				return
 			}
-			log.Printf("%s: history updated", server.Key)
+			log.Infof("updateHistory: %s: history updated", server.Key)
 		}(server, worker)
 	}
 
 	wg.Wait()
 }
 
-func (h *handler) updateServersStats(t time.Time) error {
+func (h *handler) updateServerStats(t time.Time) error {
 	servers := []*models.Server{}
 	err := h.db.
 		Model(&servers).
 		Where("status = ?  AND (stats_updated_at < ? OR stats_updated_at IS NULL)", models.ServerStatusOpen, t).
 		Select()
 	if err != nil {
-		return errors.Wrap(err, "updateServersStats")
+		return errors.Wrap(err, "updateServerStats")
 	}
+	log.WithField("numberOfServers", len(servers)).Info("updateServerStats: loaded servers")
 
 	var wg sync.WaitGroup
 	p := newPool(runtime.NumCPU())
@@ -328,12 +298,13 @@ func (h *handler) updateServersStats(t time.Time) error {
 		go func(server *models.Server, worker *updateServerStatsWorker) {
 			defer p.releaseWorker()
 			defer wg.Done()
-			log.Printf("%s: updating stats", server.Key)
+			log := log.WithField("serverKey", server.Key)
+			log.Infof("updateServerStats: %s: updating stats", server.Key)
 			if err := worker.update(); err != nil {
-				log.Println(errors.Wrap(err, server.Key))
+				log.Errorln("updateServerStats:", errors.Wrap(err, server.Key))
 				return
 			}
-			log.Printf("%s: stats updated", server.Key)
+			log.Infof("updateServerStats: %s: stats updated", server.Key)
 		}(server, worker)
 	}
 
@@ -344,8 +315,8 @@ func (h *handler) updateServersStats(t time.Time) error {
 func (h *handler) updateStats() {
 	now := time.Now()
 	t1 := time.Date(now.Year(), now.Month(), now.Day(), 1, 30, 0, 0, time.UTC)
-	if err := h.updateServersStats(t1); err != nil {
-		log.Println(err)
+	if err := h.updateServerStats(t1); err != nil {
+		log.Error(errors.Wrap(err, "updateStats"))
 	}
 }
 
@@ -355,7 +326,7 @@ func (h *handler) vacuumDatabase() {
 		Model(&servers).
 		Select()
 	if err != nil {
-		log.Println(errors.Wrap(err, "vacuumDatabase"))
+		log.Errorln(errors.Wrap(err, "vacuumDatabase"))
 		return
 	}
 
@@ -372,12 +343,13 @@ func (h *handler) vacuumDatabase() {
 		go func(server *models.Server, worker *vacuumServerDBWorker, p *pool) {
 			defer p.releaseWorker()
 			defer wg.Done()
-			log.Printf("%s: vacuuming database", server.Key)
+			log := log.WithField("serverKey", server.Key)
+			log.Infof("vacuumDatabase: %s: vacuuming database", server.Key)
 			if err := worker.vacuum(); err != nil {
-				log.Println(errors.Wrap(err, server.Key))
+				log.Errorln("vacuumDatabase:", errors.Wrap(err, server.Key))
 				return
 			}
-			log.Printf("%s: database vacuumed", server.Key)
+			log.Infof("vacuumDatabase: %s: database vacuumed", server.Key)
 		}(server, worker, p)
 	}
 

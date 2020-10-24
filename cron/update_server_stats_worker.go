@@ -79,7 +79,7 @@ func (h *updateServerStatsWorker) update() error {
 	}
 	defer tx.Close()
 
-	if err := tx.Insert(stats); err != nil {
+	if _, err := tx.Model(stats).Insert(); err != nil {
 		return errors.Wrap(err, "cannot insert server stats")
 	}
 

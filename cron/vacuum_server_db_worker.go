@@ -23,8 +23,8 @@ func (h *vacuumServerDBWorker) vacuum() error {
 	}
 	defer tx.Close()
 
-	withNonExistentPlayers := h.db.Model(&models.Player{}).Where("exists = false")
-	withNonExistentTribes := h.db.Model(&models.Tribe{}).Where("exists = false")
+	withNonExistentPlayers := h.db.Model(&models.Player{}).Column("id").Where("exists = false")
+	withNonExistentTribes := h.db.Model(&models.Tribe{}).Column("id").Where("exists = false")
 
 	_, err = tx.Model(&models.PlayerHistory{}).
 		With("players", withNonExistentPlayers).
