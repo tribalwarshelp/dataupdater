@@ -10,6 +10,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/tribalwarshelp/shared/models"
+	"github.com/tribalwarshelp/shared/tw/dataloader"
 
 	phpserialize "github.com/Kichiyaki/go-php-serialize"
 
@@ -210,9 +211,11 @@ func (h *handler) updateServerData() {
 		p.waitForWorker()
 		wg.Add(1)
 		sh := &updateServerDataWorker{
-			db:      h.db.WithParam("SERVER", pg.Safe(server.Key)),
-			baseURL: url,
-			server:  server,
+			db:     h.db.WithParam("SERVER", pg.Safe(server.Key)),
+			server: server,
+			dataloader: dataloader.New(&dataloader.Config{
+				BaseURL: url,
+			}),
 		}
 		go func(worker *updateServerDataWorker, server *models.Server, url string, log *logrus.Entry) {
 			defer p.releaseWorker()

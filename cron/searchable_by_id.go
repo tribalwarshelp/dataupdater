@@ -26,6 +26,18 @@ func (searchable playersSearchableByID) Len() int {
 	return len(searchable.players)
 }
 
+type ennoblementsSearchableByNewOwnerID struct {
+	ennoblements []*models.Ennoblement
+}
+
+func (searchable ennoblementsSearchableByNewOwnerID) GetID(index int) int {
+	return searchable.ennoblements[index].NewOwnerID
+}
+
+func (searchable ennoblementsSearchableByNewOwnerID) Len() int {
+	return len(searchable.ennoblements)
+}
+
 type searchableByID interface {
 	GetID(index int) int
 	Len() int
@@ -58,7 +70,7 @@ func searchByID(haystack searchableByID, id int) int {
 	}
 
 	if low == haystack.Len() || haystack.GetID(low) != id {
-		return 0
+		return -1
 	}
 
 	return low
