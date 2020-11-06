@@ -82,6 +82,10 @@ github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc h1:9lRDQMhESg+zvGYm
 github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc/go.mod h1:bciPuU6GHm1iF1pBvUfxfsH0Wmnc2VbpgvbI9ZWuIRs=
 github.com/tribalwarshelp/shared v0.0.0-20201031105753-5d4d8b307747 h1:ef1VuyVNNxa6ALTPS5X8dPEsAI7KuA3/umNNkrI4fIk=
 github.com/tribalwarshelp/shared v0.0.0-20201031105753-5d4d8b307747/go.mod h1:Lxk6zaQhPTPrgz9ksMgg51m8XgflrCo/kRBx2cM3yfk=
+github.com/tribalwarshelp/shared v0.0.0-20201106180434-6c4f27f3d226 h1:8NGC6rJ9XeKKghtvjMSwbse47y+sEVYSzsmsUF4AaY8=
+github.com/tribalwarshelp/shared v0.0.0-20201106180434-6c4f27f3d226/go.mod h1:Lxk6zaQhPTPrgz9ksMgg51m8XgflrCo/kRBx2cM3yfk=
+github.com/tribalwarshelp/shared v0.0.0-20201106181031-7c5891c02013 h1:6KWK3MWsTfIIWeRfC6+Ba+GvlwbV9Mq+HefbE+QcU2s=
+github.com/tribalwarshelp/shared v0.0.0-20201106181031-7c5891c02013/go.mod h1:Lxk6zaQhPTPrgz9ksMgg51m8XgflrCo/kRBx2cM3yfk=
 github.com/vmihailenco/bufpool v0.1.11 h1:gOq2WmBrq0i2yW5QJ16ykccQ4wH9UyEsgLm6czKAd94=
 github.com/vmihailenco/bufpool v0.1.11/go.mod h1:AFf/MOy3l2CFTKbxwt0mp2MwnqjNEs5H/UxrkA5jxTQ=
 github.com/vmihailenco/msgpack/v4 v4.3.11 h1:Q47CePddpNGNhk4GCnAx9DDtASi2rasatE0cd26cZoE=

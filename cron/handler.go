@@ -42,7 +42,7 @@ func (h *handler) init() error {
 	models := []interface{}{
 		(*models.SpecialServer)(nil),
 		(*models.Server)(nil),
-		(*models.LangVersion)(nil),
+		(*models.Version)(nil),
 		(*models.PlayerToServer)(nil),
 		(*models.PlayerNameChange)(nil),
 	}
@@ -107,7 +107,7 @@ func (h *handler) createSchema(server *models.Server) error {
 		serverPGTriggers,
 		serverPGDefaultValues,
 	} {
-		if _, err := tx.Exec(statement, pg.Safe(server.Key), server.LangVersionTag); err != nil {
+		if _, err := tx.Exec(statement, pg.Safe(server.Key), server.VersionCode); err != nil {
 			return err
 		}
 	}
@@ -116,44 +116,44 @@ func (h *handler) createSchema(server *models.Server) error {
 }
 
 func (h *handler) getServers() ([]*models.Server, map[string]string, error) {
-	langVersions := []*models.LangVersion{}
-	if err := h.db.Model(&langVersions).Relation("SpecialServers").Order("tag ASC").Select(); err != nil {
+	versions := []*models.Version{}
+	if err := h.db.Model(&versions).Relation("SpecialServers").Order("code ASC").Select(); err != nil {
 		return nil, nil, errors.Wrap(err, "getServers")
 	}
 
 	serverKeys := []string{}
 	servers := []*models.Server{}
 	urls := make(map[string]string)
-	loadedLangVersions := []models.LanguageTag{}
-	for _, langVersion := range langVersions {
-		log := log.WithField("host", langVersion.Host)
-		log.Infof("Loading servers from %s", langVersion.Host)
-		resp, err := http.Get(fmt.Sprintf("https://%s%s", langVersion.Host, endpointGetServers))
+	loadedVersions := []models.VersionCode{}
+	for _, version := range versions {
+		log := log.WithField("host", version.Host)
+		log.Infof("Loading servers from %s", version.Host)
+		resp, err := http.Get(fmt.Sprintf("https://%s%s", version.Host, endpointGetServers))
 		if err != nil {
-			log.Errorln(errors.Wrapf(err, "Cannot fetch servers from %s", langVersion.Host))
+			log.Errorln(errors.Wrapf(err, "Cannot fetch servers from %s", version.Host))
 			continue
 		}
 		defer resp.Body.Close()
 		bodyBytes, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			log.Errorln(errors.Wrapf(err, "Cannot read response body from %s", langVersion.Host))
+			log.Errorln(errors.Wrapf(err, "Cannot read response body from %s", version.Host))
 			continue
 		}
 		body, err := phpserialize.Decode(string(bodyBytes))
 		if err != nil {
-			log.Errorln(errors.Wrapf(err, "Cannot serialize body from %s into go value", langVersion.Host))
+			log.Errorln(errors.Wrapf(err, "Cannot serialize body from %s into go value", version.Host))
 			continue
 		}
 		for serverKey, url := range body.(map[interface{}]interface{}) {
 			serverKeyStr := serverKey.(string)
-			if langVersion.SpecialServers.Contains(serverKeyStr) {
+			if version.SpecialServers.Contains(serverKeyStr) {
 				continue
 			}
 			server := &models.Server{
-				Key:            serverKeyStr,
-				Status:         models.ServerStatusOpen,
-				LangVersionTag: langVersion.Tag,
-				LangVersion:    langVersion,
+				Key:         serverKeyStr,
+				Status:      models.ServerStatusOpen,
+				VersionCode: version.Code,
+				Version:     version,
 			}
 			if err := h.createSchema(server); err != nil {
 				log.WithField("serverKey", serverKey).Errorln(errors.Wrapf(err, "Cannot create schema for %s", serverKey))
@@ -163,14 +163,14 @@ func (h *handler) getServers() ([]*models.Server, map[string]string, error) {
 			urls[serverKeyStr] = url.(string)
 			servers = append(servers, server)
 		}
-		loadedLangVersions = append(loadedLangVersions, langVersion.Tag)
+		loadedVersions = append(loadedVersions, version.Code)
 	}
 
 	if len(servers) > 0 {
 		if _, err := h.db.Model(&servers).
 			OnConflict("(key) DO UPDATE").
 			Set("status = ?", models.ServerStatusOpen).
-			Set("lang_version_tag = EXCLUDED.lang_version_tag").
+			Set("version_code = EXCLUDED.version_code").
 			Returning("*").
 			Insert(); err != nil {
 			return nil, nil, err
@@ -179,7 +179,7 @@ func (h *handler) getServers() ([]*models.Server, map[string]string, error) {
 
 	if _, err := h.db.Model(&models.Server{}).
 		Set("status = ?", models.ServerStatusClosed).
-		Where("key NOT IN (?) AND lang_version_tag IN (?)", pg.In(serverKeys), pg.In(loadedLangVersions)).
+		Where("key NOT IN (?) AND version_code IN (?)", pg.In(serverKeys), pg.In(loadedVersions)).
 		Update(); err != nil {
 		return nil, nil, err
 	}
