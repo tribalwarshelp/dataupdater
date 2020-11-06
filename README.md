@@ -9,7 +9,7 @@ Features:
 
 ## Development
 
-**Required env variables to run this cron** (you can set them directly in your system or create .env.development file):
+**Required env variables to run this cron:**
 
 ```
 DB_USER=your_db_user
