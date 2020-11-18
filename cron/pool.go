@@ -20,7 +20,3 @@ func (p *pool) releaseWorker() {
 func (p *pool) waitForWorker() bool {
 	return <-p.workers
 }
-
-func (p *pool) close() {
-	close(p.workers)
-}

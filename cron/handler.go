@@ -199,7 +199,6 @@ func (h *handler) updateServerData() {
 
 	var wg sync.WaitGroup
 	p := newPool(h.maxConcurrentWorkers)
-	defer p.close()
 
 	for _, server := range servers {
 		log := log.WithField("serverKey", server.Key)
@@ -218,8 +217,10 @@ func (h *handler) updateServerData() {
 			}),
 		}
 		go func(worker *updateServerDataWorker, server *models.Server, url string, log *logrus.Entry) {
-			defer p.releaseWorker()
-			defer wg.Done()
+			defer func() {
+				p.releaseWorker()
+				wg.Done()
+			}()
 			log.Infof("updateServerData: %s: updating data", server.Key)
 			err := sh.update()
 			if err != nil {
@@ -251,7 +252,6 @@ func (h *handler) updateHistory() {
 
 	var wg sync.WaitGroup
 	p := newPool(runtime.NumCPU())
-	defer p.close()
 
 	for _, server := range servers {
 		p.waitForWorker()
@@ -261,8 +261,10 @@ func (h *handler) updateHistory() {
 			server: server,
 		}
 		go func(server *models.Server, worker *updateServerHistoryWorker) {
-			defer p.releaseWorker()
-			defer wg.Done()
+			defer func() {
+				p.releaseWorker()
+				wg.Done()
+			}()
 			log := log.WithField("serverKey", server.Key)
 			log.Infof("updateHistory: %s: updating history", server.Key)
 			if err := worker.update(); err != nil {
@@ -289,7 +291,6 @@ func (h *handler) updateServerStats(t time.Time) error {
 
 	var wg sync.WaitGroup
 	p := newPool(runtime.NumCPU())
-	defer p.close()
 
 	for _, server := range servers {
 		p.waitForWorker()
@@ -299,8 +300,10 @@ func (h *handler) updateServerStats(t time.Time) error {
 			server: server,
 		}
 		go func(server *models.Server, worker *updateServerStatsWorker) {
-			defer p.releaseWorker()
-			defer wg.Done()
+			defer func() {
+				p.releaseWorker()
+				wg.Done()
+			}()
 			log := log.WithField("serverKey", server.Key)
 			log.Infof("updateServerStats: %s: updating stats", server.Key)
 			if err := worker.update(); err != nil {
@@ -335,7 +338,6 @@ func (h *handler) vacuumDatabase() {
 
 	var wg sync.WaitGroup
 	p := newPool(runtime.NumCPU())
-	defer p.close()
 
 	for _, server := range servers {
 		p.waitForWorker()
