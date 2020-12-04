@@ -1,8 +1,6 @@
 package cron
 
 import (
-	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/tribalwarshelp/shared/models"
@@ -65,33 +63,6 @@ func (h *updateServerDataWorker) loadTribes(od map[int]*models.OpponentsDefeated
 		}
 	}
 	return tribes, nil
-}
-
-func (h *updateServerDataWorker) parseEnnoblementLine(line []string) (*models.Ennoblement, error) {
-	if len(line) != 4 {
-		return nil, fmt.Errorf("Invalid line format (should be village_id,timestamp,new_owner_id,old_owner_id)")
-	}
-	var err error
-	ennoblement := &models.Ennoblement{}
-	ennoblement.VillageID, err = strconv.Atoi(line[0])
-	if err != nil {
-		return nil, errors.Wrap(err, "ennoblement.VillageID")
-	}
-	timestamp, err := strconv.Atoi(line[1])
-	if err != nil {
-		return nil, errors.Wrap(err, "timestamp")
-	}
-	ennoblement.EnnobledAt = time.Unix(int64(timestamp), 0)
-	ennoblement.NewOwnerID, err = strconv.Atoi(line[2])
-	if err != nil {
-		return nil, errors.Wrap(err, "ennoblement.NewOwnerID")
-	}
-	ennoblement.OldOwnerID, err = strconv.Atoi(line[3])
-	if err != nil {
-		return nil, errors.Wrap(err, "ennoblement.OldOwnerID")
-	}
-
-	return ennoblement, nil
 }
 
 func (h *updateServerDataWorker) loadEnnoblements() ([]*models.Ennoblement, error) {

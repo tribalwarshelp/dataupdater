@@ -75,7 +75,7 @@ const (
 			RETURNS trigger AS
 		$BODY$
 		BEGIN
-			IF NEW.name <> OLD.name THEN
+			IF NEW.name <> OLD.name AND old.exists = true THEN
 				INSERT INTO player_name_changes(version_code,player_id,old_name,new_name,change_date)
 				VALUES(?1,NEW.id,OLD.name,NEW.name,CURRENT_DATE)
 				ON CONFLICT DO NOTHING;
