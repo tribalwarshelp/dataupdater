@@ -4,7 +4,6 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"runtime"
 	"strconv"
 	"syscall"
 
