@@ -37,7 +37,7 @@ func main() {
 		Password: os.Getenv("DB_PASSWORD"),
 		Database: os.Getenv("DB_NAME"),
 		Addr:     os.Getenv("DB_HOST") + ":" + os.Getenv("DB_PORT"),
-		PoolSize: runtime.NumCPU() * 5,
+		PoolSize: mustParseEnvToInt("DB_POOL_SIZE"),
 	}
 	dbFields := logrus.Fields{
 		"user":     dbOptions.User,
