@@ -15,6 +15,7 @@ var log = logrus.WithField("package", "cron")
 type Config struct {
 	DB                   *pg.DB
 	MaxConcurrentWorkers int
+	RunOnStartup         bool
 }
 
 func Attach(c *cron.Cron, cfg Config) error {
@@ -43,12 +44,14 @@ func Attach(c *cron.Cron, cfg Config) error {
 	if _, err := c.AddFunc("30 2 * * *", updateStats); err != nil {
 		return err
 	}
-	go func() {
-		updateServerData()
-		vacuumDatabase()
-		updateHistory()
-		updateStats()
-	}()
+	if cfg.RunOnStartup {
+		go func() {
+			updateServerData()
+			vacuumDatabase()
+			updateHistory()
+			updateStats()
+		}()
+	}
 
 	return nil
 }

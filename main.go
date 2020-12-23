@@ -57,6 +57,7 @@ func main() {
 	if err := _cron.Attach(c, _cron.Config{
 		DB:                   db,
 		MaxConcurrentWorkers: mustParseEnvToInt("MAX_CONCURRENT_WORKERS"),
+		RunOnStartup:         os.Getenv("RUN_ON_STARTUP") == "true",
 	}); err != nil {
 		logrus.Fatal(err)
 	}
