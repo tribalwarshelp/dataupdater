@@ -23,12 +23,12 @@ func (h *vacuumServerDBWorker) vacuum() error {
 	}
 	defer tx.Close()
 
-	withNonExistentPlayers := h.db.Model(&models.Player{}).Column("id").Where("exists = false")
-	withNonExistentTribes := h.db.Model(&models.Tribe{}).Column("id").Where("exists = false")
+	withNonExistentPlayers := h.db.Model(&models.Player{}).Column("id").Where("exists = false and NOW() - deleted_at > '14 days'")
+	withNonExistentTribes := h.db.Model(&models.Tribe{}).Column("id").Where("exists = false and NOW() - deleted_at > '14 days'")
 
 	_, err = tx.Model(&models.PlayerHistory{}).
 		With("players", withNonExistentPlayers).
-		Where("player_id IN (Select id FROM players) OR player_history.create_date < ?", time.Now().Add(-1*day*90)).
+		Where("player_id IN (Select id FROM players) OR player_history.create_date < ?", time.Now().Add(-1*day*180)).
 		Delete()
 	if err != nil {
 		return errors.Wrap(err, "couldnt delete old player history records")
@@ -36,7 +36,7 @@ func (h *vacuumServerDBWorker) vacuum() error {
 
 	_, err = tx.Model(&models.TribeHistory{}).
 		With("tribes", withNonExistentTribes).
-		Where("tribe_id IN (Select id FROM tribes) OR tribe_history.create_date < ?", time.Now().Add(-1*day*90)).
+		Where("tribe_id IN (Select id FROM tribes) OR tribe_history.create_date < ?", time.Now().Add(-1*day*180)).
 		Delete()
 	if err != nil {
 		return errors.Wrap(err, "couldnt delete old tribe history records")
@@ -44,7 +44,7 @@ func (h *vacuumServerDBWorker) vacuum() error {
 
 	_, err = tx.Model(&models.DailyPlayerStats{}).
 		With("players", withNonExistentPlayers).
-		Where("player_id IN (Select id FROM players) OR daily_player_stats.create_date < ?", time.Now().Add(-1*day*90)).
+		Where("player_id IN (Select id FROM players) OR daily_player_stats.create_date < ?", time.Now().Add(-1*day*180)).
 		Delete()
 	if err != nil {
 		return errors.Wrap(err, "couldnt delete old player stats records")
@@ -52,7 +52,7 @@ func (h *vacuumServerDBWorker) vacuum() error {
 
 	_, err = tx.Model(&models.DailyTribeStats{}).
 		With("tribes", withNonExistentTribes).
-		Where("tribe_id IN (Select id FROM tribes) OR daily_tribe_stats.create_date < ?", time.Now().Add(-1*day*90)).
+		Where("tribe_id IN (Select id FROM tribes) OR daily_tribe_stats.create_date < ?", time.Now().Add(-1*day*180)).
 		Delete()
 	if err != nil {
 		return errors.Wrap(err, "couldnt delete old tribe stats records")

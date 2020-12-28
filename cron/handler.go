@@ -282,7 +282,7 @@ func (h *handler) updateServerStats(t time.Time) error {
 	servers := []*models.Server{}
 	err := h.db.
 		Model(&servers).
-		Where("status = ?  AND (stats_updated_at < ? OR stats_updated_at IS NULL)", models.ServerStatusOpen, t).
+		Where("status = ? AND (stats_updated_at < ? OR stats_updated_at IS NULL)", models.ServerStatusOpen, t).
 		Select()
 	if err != nil {
 		return errors.Wrap(err, "updateServerStats")
