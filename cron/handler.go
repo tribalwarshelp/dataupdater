@@ -236,7 +236,7 @@ func (h *handler) updateServerData() {
 func (h *handler) updateHistory(location *time.Location) {
 	servers := []*models.Server{}
 	now := time.Now()
-	t1 := time.Date(now.Year(), now.Month(), now.Day(), 0, 30, 0, 0, location)
+	t1 := time.Date(now.Year(), now.Month(), now.Day(), 1, 30, 0, 0, location)
 	log = log.WithField("timezone", location.String())
 	err := h.db.
 		Model(&servers).
@@ -285,7 +285,7 @@ func (h *handler) updateHistory(location *time.Location) {
 func (h *handler) updateStats(location *time.Location) {
 	servers := []*models.Server{}
 	now := time.Now()
-	t := time.Date(now.Year(), now.Month(), now.Day(), 0, 45, 0, 0, location)
+	t := time.Date(now.Year(), now.Month(), now.Day(), 1, 45, 0, 0, location)
 	err := h.db.
 		Model(&servers).
 		Where("status = ? AND (stats_updated_at < ? OR stats_updated_at IS NULL) AND timezone = ?",
