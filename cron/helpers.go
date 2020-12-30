@@ -78,3 +78,13 @@ func calcPlayerDailyGrowth(diffInDays, points int) int {
 	}
 	return 0
 }
+
+func createFnWithTimezone(timezone string, fn func(location *time.Location)) func() {
+	tz, err := time.LoadLocation(timezone)
+	if err != nil {
+		tz = time.UTC
+	}
+	return func() {
+		fn(tz)
+	}
+}

@@ -3,6 +3,7 @@ package cron
 import (
 	"fmt"
 
+	"github.com/tribalwarshelp/shared/models"
 	"github.com/tribalwarshelp/shared/utils"
 
 	"github.com/go-pg/pg/v10"
@@ -20,7 +21,7 @@ type Config struct {
 
 func Attach(c *cron.Cron, cfg Config) error {
 	if cfg.DB == nil {
-		return fmt.Errorf("cfg.DB cannot be nil, expected go-pg database")
+		return fmt.Errorf("cfg.DB cannot be nil, expected *pg.DB")
 	}
 
 	h := &handler{cfg.DB, cfg.MaxConcurrentWorkers}
@@ -28,28 +29,49 @@ func Attach(c *cron.Cron, cfg Config) error {
 		return err
 	}
 
+	versions := []*models.Version{}
+	if err := cfg.DB.Model(&versions).Select(); err != nil {
+		return err
+	}
+
 	updateServerData := utils.TrackExecutionTime(log, h.updateServerData, "updateServerData")
-	updateHistory := utils.TrackExecutionTime(log, h.updateHistory, "updateHistory")
 	vacuumDatabase := utils.TrackExecutionTime(log, h.vacuumDatabase, "vacuumDatabase")
-	updateStats := utils.TrackExecutionTime(log, h.updateStats, "updateStats")
+	updateHistoryFuncs := []func(){}
+	updateStatsFuncs := []func(){}
+	for _, version := range versions {
+		updateHistory := utils.TrackExecutionTime(log,
+			createFnWithTimezone(version.Timezone, h.updateHistory),
+			fmt.Sprintf("%s: updateHistory", version.Timezone))
+		updateHistoryFuncs = append(updateHistoryFuncs, updateHistory)
+
+		updateStats := utils.TrackExecutionTime(log,
+			createFnWithTimezone(version.Timezone, h.updateStats),
+			fmt.Sprintf("%s: updateStats", version.Timezone))
+		updateStatsFuncs = append(updateStatsFuncs, updateStats)
+
+		if _, err := c.AddFunc(fmt.Sprintf("CRON_TZ=%s 30 1 * * *", version.Timezone), updateHistory); err != nil {
+			return err
+		}
+		if _, err := c.AddFunc(fmt.Sprintf("CRON_TZ=%s 45 1 * * *", version.Timezone), updateStats); err != nil {
+			return err
+		}
+	}
 	if _, err := c.AddFunc("0 * * * *", updateServerData); err != nil {
 		return err
 	}
-	if _, err := c.AddFunc("30 0 * * *", updateHistory); err != nil {
-		return err
-	}
-	if _, err := c.AddFunc("30 1 * * *", vacuumDatabase); err != nil {
-		return err
-	}
-	if _, err := c.AddFunc("30 2 * * *", updateStats); err != nil {
+	if _, err := c.AddFunc("20 1 * * *", vacuumDatabase); err != nil {
 		return err
 	}
 	if cfg.RunOnStartup {
 		go func() {
 			updateServerData()
 			vacuumDatabase()
-			updateHistory()
-			updateStats()
+			for _, fn := range updateHistoryFuncs {
+				fn()
+			}
+			for _, fn := range updateStatsFuncs {
+				fn()
+			}
 		}()
 	}
 

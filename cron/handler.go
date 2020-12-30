@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"runtime"
 	"sync"
 	"time"
 
@@ -234,13 +233,18 @@ func (h *handler) updateServerData() {
 	wg.Wait()
 }
 
-func (h *handler) updateHistory() {
+func (h *handler) updateHistory(location *time.Location) {
 	servers := []*models.Server{}
 	now := time.Now()
-	t1 := time.Date(now.Year(), now.Month(), now.Day(), 0, 30, 0, 0, time.UTC)
+	t1 := time.Date(now.Year(), now.Month(), now.Day(), 0, 30, 0, 0, location)
+	log = log.WithField("timezone", location.String())
 	err := h.db.
 		Model(&servers).
-		Where("status = ? AND (history_updated_at < ? OR history_updated_at IS NULL)", models.ServerStatusOpen, t1).
+		Where("status = ? AND (history_updated_at < ? OR history_updated_at IS NULL) AND timezone = ?",
+			models.ServerStatusOpen,
+			t1,
+			location.String()).
+		Relation("Version").
 		Select()
 	if err != nil {
 		log.Errorln(errors.Wrap(err, "updateHistory"))
@@ -251,7 +255,7 @@ func (h *handler) updateHistory() {
 		Info("updateHistory: servers loaded")
 
 	var wg sync.WaitGroup
-	p := newPool(runtime.NumCPU())
+	p := newPool(h.maxConcurrentWorkers)
 
 	for _, server := range servers {
 		p.waitForWorker()
@@ -278,19 +282,26 @@ func (h *handler) updateHistory() {
 	wg.Wait()
 }
 
-func (h *handler) updateServerStats(t time.Time) error {
+func (h *handler) updateStats(location *time.Location) {
 	servers := []*models.Server{}
+	now := time.Now()
+	t := time.Date(now.Year(), now.Month(), now.Day(), 0, 45, 0, 0, location)
 	err := h.db.
 		Model(&servers).
-		Where("status = ? AND (stats_updated_at < ? OR stats_updated_at IS NULL)", models.ServerStatusOpen, t).
+		Where("status = ? AND (stats_updated_at < ? OR stats_updated_at IS NULL) AND timezone = ?",
+			models.ServerStatusOpen,
+			t,
+			location.String()).
+		Relation("Version").
 		Select()
 	if err != nil {
-		return errors.Wrap(err, "updateServerStats")
+		log.Errorf(errors.Wrap(err, "updateServerStats").Error())
+		return
 	}
 	log.WithField("numberOfServers", len(servers)).Info("updateServerStats: servers loaded")
 
 	var wg sync.WaitGroup
-	p := newPool(runtime.NumCPU())
+	p := newPool(h.maxConcurrentWorkers)
 
 	for _, server := range servers {
 		p.waitForWorker()
@@ -315,15 +326,6 @@ func (h *handler) updateServerStats(t time.Time) error {
 	}
 
 	wg.Wait()
-	return nil
-}
-
-func (h *handler) updateStats() {
-	now := time.Now()
-	t1 := time.Date(now.Year(), now.Month(), now.Day(), 1, 30, 0, 0, time.UTC)
-	if err := h.updateServerStats(t1); err != nil {
-		log.Error(errors.Wrap(err, "updateStats"))
-	}
 }
 
 func (h *handler) vacuumDatabase() {
@@ -337,7 +339,7 @@ func (h *handler) vacuumDatabase() {
 	}
 
 	var wg sync.WaitGroup
-	p := newPool(runtime.NumCPU())
+	p := newPool(h.maxConcurrentWorkers)
 
 	for _, server := range servers {
 		p.waitForWorker()

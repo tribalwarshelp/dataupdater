@@ -28,13 +28,13 @@ const (
 		INSERT INTO public.versions (code, name, host, timezone) VALUES ('hu', 'Hungary', 'klanhaboru.hu', 'Europe/Budapest') ON CONFLICT (code) DO NOTHING;
 		INSERT INTO public.versions (code, name, host, timezone) VALUES ('it', 'Italy', 'tribals.it', 'Europe/Rome') ON CONFLICT (code) DO NOTHING;
 		INSERT INTO public.versions (code, name, host, timezone) VALUES ('fr', 'France', 'guerretribale.fr', 'Europe/Paris') ON CONFLICT (code) DO NOTHING;
-		INSERT INTO public.versions (code, name, host, timezone) VALUES ('us', 'United States', 'tribalwars.us', 'America/Washington') ON CONFLICT (code) DO NOTHING;
+		INSERT INTO public.versions (code, name, host, timezone) VALUES ('us', 'United States', 'tribalwars.us', 'America/New_York') ON CONFLICT (code) DO NOTHING;
 		INSERT INTO public.versions (code, name, host, timezone) VALUES ('nl', 'The Netherlands', 'tribalwars.nl', 'Europe/Amsterdam') ON CONFLICT (code) DO NOTHING;
 		INSERT INTO public.versions (code, name, host, timezone) VALUES ('es', 'Spain', 'guerrastribales.es', 'Europe/Madrid') ON CONFLICT (code) DO NOTHING;
 		INSERT INTO public.versions (code, name, host, timezone) VALUES ('ro', 'Romania', 'triburile.ro', 'Europe/Bucharest') ON CONFLICT (code) DO NOTHING;
 		INSERT INTO public.versions (code, name, host, timezone) VALUES ('gr', 'Greece', 'fyletikesmaxes.gr', 'Europe/Athens') ON CONFLICT (code) DO NOTHING;
 		INSERT INTO public.versions (code, name, host, timezone) VALUES ('br', 'Brazil', 'tribalwars.com.br', 'America/Sao_Paulo') ON CONFLICT (code) DO NOTHING;
-		INSERT INTO public.versions (code, name, host, timezone) VALUES ('tr', 'Turkey', 'klanlar.org', 'Europe/Instanbul') ON CONFLICT (code) DO NOTHING;
+		INSERT INTO public.versions (code, name, host, timezone) VALUES ('tr', 'Turkey', 'klanlar.org', 'Europe/Istanbul') ON CONFLICT (code) DO NOTHING;
 		INSERT INTO public.versions (code, name, host, timezone) VALUES ('cs', 'Czech Republic', 'divokekmeny.cz', 'Europe/Prague') ON CONFLICT (code) DO NOTHING;
 		INSERT INTO public.versions (code, name, host, timezone) VALUES ('ru', 'Russia', 'voyna-plemyon.ru', 'Europe/Moscow') ON CONFLICT (code) DO NOTHING;
 		INSERT INTO public.versions (code, name, host, timezone) VALUES ('ch', 'Switerzland', 'staemme.ch', 'Europe/Zurich') ON CONFLICT (code) DO NOTHING;

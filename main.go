@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 
 	"github.com/sirupsen/logrus"
@@ -13,6 +14,7 @@ import (
 	_cron "github.com/tribalwarshelp/cron/cron"
 
 	"github.com/go-pg/pg/v10"
+	"github.com/go-pg/pgext"
 	"github.com/joho/godotenv"
 	"github.com/robfig/cron/v3"
 )
@@ -49,6 +51,11 @@ func main() {
 			logrus.WithFields(dbFields).Fatalln(err)
 		}
 	}()
+	if strings.ToUpper(os.Getenv("LOG_DB_QUERIES")) == "TRUE" {
+		db.AddQueryHook(pgext.DebugHook{
+			Verbose: true,
+		})
+	}
 	logrus.WithFields(dbFields).Info("Connected to the database")
 
 	c := cron.New(cron.WithChain(
