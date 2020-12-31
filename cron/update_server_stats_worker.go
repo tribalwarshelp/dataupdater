@@ -9,8 +9,9 @@ import (
 )
 
 type updateServerStatsWorker struct {
-	db     *pg.DB
-	server *models.Server
+	db       *pg.DB
+	server   *models.Server
+	location *time.Location
 }
 
 func (h *updateServerStatsWorker) prepare() (*models.ServerStats, error) {
@@ -51,6 +52,8 @@ func (h *updateServerStatsWorker) prepare() (*models.ServerStats, error) {
 		return nil, errors.Wrap(err, "couldnt count villages")
 	}
 
+	now := time.Now().In(h.location)
+	createDate := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
 	return &models.ServerStats{
 		ActivePlayers:   activePlayers,
 		InactivePlayers: inactivePlayers,
@@ -64,6 +67,7 @@ func (h *updateServerStatsWorker) prepare() (*models.ServerStats, error) {
 		BonusVillages:     bonusVillages,
 		PlayerVillages:    playerVillages,
 		Villages:          villages,
+		CreateDate:        createDate,
 	}, nil
 }
 

@@ -9,8 +9,9 @@ import (
 )
 
 type updateServerHistoryWorker struct {
-	db     *pg.DB
-	server *models.Server
+	db       *pg.DB
+	server   *models.Server
+	location *time.Location
 }
 
 func (h *updateServerHistoryWorker) update() error {
@@ -19,7 +20,8 @@ func (h *updateServerHistoryWorker) update() error {
 		return errors.Wrap(err, "couldnt load players")
 	}
 
-	createDate := time.Now()
+	now := time.Now().In(h.location)
+	createDate := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
 	ph := []*models.PlayerHistory{}
 	for _, player := range players {
 		ph = append(ph, &models.PlayerHistory{
