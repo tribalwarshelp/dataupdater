@@ -30,7 +30,7 @@ func Attach(c *cron.Cron, cfg Config) error {
 	}
 
 	versions := []*models.Version{}
-	if err := cfg.DB.Model(&versions).Select(); err != nil {
+	if err := cfg.DB.Model(&versions).DistinctOn("timezone").Select(); err != nil {
 		return err
 	}
 
@@ -67,10 +67,10 @@ func Attach(c *cron.Cron, cfg Config) error {
 			updateServerData()
 			vacuumDatabase()
 			for _, fn := range updateHistoryFuncs {
-				fn()
+				go fn()
 			}
 			for _, fn := range updateStatsFuncs {
-				fn()
+				go fn()
 			}
 		}()
 	}
