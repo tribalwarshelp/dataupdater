@@ -24,7 +24,7 @@ func Attach(c *cron.Cron, cfg Config) error {
 		return fmt.Errorf("cfg.DB cannot be nil, expected *pg.DB")
 	}
 
-	h := &handler{cfg.DB, cfg.MaxConcurrentWorkers}
+	h := &handler{db: cfg.DB, maxConcurrentWorkers: cfg.MaxConcurrentWorkers}
 	if err := h.init(); err != nil {
 		return err
 	}

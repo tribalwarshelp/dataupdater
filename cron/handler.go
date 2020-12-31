@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"runtime"
 	"sync"
 	"time"
 
@@ -25,11 +26,16 @@ const (
 type handler struct {
 	db                   *pg.DB
 	maxConcurrentWorkers int
+	pool                 *pool
 }
 
 func (h *handler) init() error {
 	if h.maxConcurrentWorkers <= 0 {
-		h.maxConcurrentWorkers = 1
+		h.maxConcurrentWorkers = runtime.NumCPU()
+	}
+
+	if h.pool == nil {
+		h.pool = newPool(h.maxConcurrentWorkers)
 	}
 
 	tx, err := h.db.Begin()
@@ -197,7 +203,6 @@ func (h *handler) updateServerData() {
 		Info("updateServerData: servers loaded")
 
 	var wg sync.WaitGroup
-	p := newPool(h.maxConcurrentWorkers)
 
 	for _, server := range servers {
 		log := log.WithField("serverKey", server.Key)
@@ -206,7 +211,7 @@ func (h *handler) updateServerData() {
 			log.Warnf("No one URL associated with key: %s, skipping...", server.Key)
 			continue
 		}
-		p.waitForWorker()
+		h.pool.waitForWorker()
 		wg.Add(1)
 		sh := &updateServerDataWorker{
 			db:     h.db.WithParam("SERVER", pg.Safe(server.Key)),
@@ -217,7 +222,7 @@ func (h *handler) updateServerData() {
 		}
 		go func(worker *updateServerDataWorker, server *models.Server, url string, log *logrus.Entry) {
 			defer func() {
-				p.releaseWorker()
+				h.pool.releaseWorker()
 				wg.Done()
 			}()
 			log.Infof("updateServerData: %s: updating data", server.Key)
@@ -255,10 +260,9 @@ func (h *handler) updateHistory(location *time.Location) {
 		Info("updateHistory: servers loaded")
 
 	var wg sync.WaitGroup
-	p := newPool(h.maxConcurrentWorkers)
 
 	for _, server := range servers {
-		p.waitForWorker()
+		h.pool.waitForWorker()
 		wg.Add(1)
 		worker := &updateServerHistoryWorker{
 			db:     h.db.WithParam("SERVER", pg.Safe(server.Key)),
@@ -266,7 +270,7 @@ func (h *handler) updateHistory(location *time.Location) {
 		}
 		go func(server *models.Server, worker *updateServerHistoryWorker) {
 			defer func() {
-				p.releaseWorker()
+				h.pool.releaseWorker()
 				wg.Done()
 			}()
 			log := log.WithField("serverKey", server.Key)
@@ -301,10 +305,9 @@ func (h *handler) updateStats(location *time.Location) {
 	log.WithField("numberOfServers", len(servers)).Info("updateServerStats: servers loaded")
 
 	var wg sync.WaitGroup
-	p := newPool(h.maxConcurrentWorkers)
 
 	for _, server := range servers {
-		p.waitForWorker()
+		h.pool.waitForWorker()
 		wg.Add(1)
 		worker := &updateServerStatsWorker{
 			db:     h.db.WithParam("SERVER", pg.Safe(server.Key)),
@@ -312,7 +315,7 @@ func (h *handler) updateStats(location *time.Location) {
 		}
 		go func(server *models.Server, worker *updateServerStatsWorker) {
 			defer func() {
-				p.releaseWorker()
+				h.pool.releaseWorker()
 				wg.Done()
 			}()
 			log := log.WithField("serverKey", server.Key)
@@ -339,17 +342,18 @@ func (h *handler) vacuumDatabase() {
 	}
 
 	var wg sync.WaitGroup
-	p := newPool(h.maxConcurrentWorkers)
 
 	for _, server := range servers {
-		p.waitForWorker()
+		h.pool.waitForWorker()
 		wg.Add(1)
 		worker := &vacuumServerDBWorker{
 			db: h.db.WithParam("SERVER", pg.Safe(server.Key)),
 		}
-		go func(server *models.Server, worker *vacuumServerDBWorker, p *pool) {
-			defer p.releaseWorker()
-			defer wg.Done()
+		go func(server *models.Server, worker *vacuumServerDBWorker) {
+			defer func() {
+				h.pool.releaseWorker()
+				wg.Done()
+			}()
 			log := log.WithField("serverKey", server.Key)
 			log.Infof("vacuumDatabase: %s: vacuuming database", server.Key)
 			if err := worker.vacuum(); err != nil {
@@ -357,7 +361,7 @@ func (h *handler) vacuumDatabase() {
 				return
 			}
 			log.Infof("vacuumDatabase: %s: database vacuumed", server.Key)
-		}(server, worker, p)
+		}(server, worker)
 	}
 
 	wg.Wait()
