@@ -21,6 +21,7 @@ const (
 		INSERT INTO public.special_servers (version_code, key) VALUES ('ru', 'rus1') ON CONFLICT ON CONSTRAINT special_servers_version_code_key_key DO NOTHING;
 		INSERT INTO public.special_servers (version_code, key) VALUES ('ch', 'chs1') ON CONFLICT ON CONSTRAINT special_servers_version_code_key_key DO NOTHING;
 		INSERT INTO public.special_servers (version_code, key) VALUES ('pt', 'pts1') ON CONFLICT ON CONSTRAINT special_servers_version_code_key_key DO NOTHING;
+		INSERT INTO public.special_servers (version_code, key) VALUES ('sk', 'sks1') ON CONFLICT ON CONSTRAINT special_servers_version_code_key_key DO NOTHING;
 	`
 	allVersionsPGInsertStatements = `
 		INSERT INTO public.versions (code, name, host, timezone) VALUES ('pl', 'Polska', 'plemiona.pl', 'Europe/Warsaw') ON CONFLICT (code) DO NOTHING;
@@ -41,6 +42,7 @@ const (
 		INSERT INTO public.versions (code, name, host, timezone) VALUES ('pt', 'Portugal', 'tribalwars.com.pt', 'Europe/Lisbon') ON CONFLICT (code) DO NOTHING;
 		INSERT INTO public.versions (code, name, host, timezone) VALUES ('en', 'International', 'tribalwars.net', 'Europe/London') ON CONFLICT (code) DO NOTHING;
 		INSERT INTO public.versions (code, name, host, timezone) VALUES ('de', 'Germany', 'die-staemme.de', 'Europe/Berlin') ON CONFLICT (code) DO NOTHING;
+		INSERT INTO public.versions (code, name, host, timezone) VALUES ('sk', 'Slovakia', 'divoke-kmene.sk', 'Europe/Bratislava') ON CONFLICT (code) DO NOTHING;
 	`
 	serverPGFunctions = `
 		CREATE OR REPLACE FUNCTION ?0.log_tribe_change_on_insert()
