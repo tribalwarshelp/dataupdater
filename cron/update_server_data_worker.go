@@ -80,12 +80,6 @@ func (h *updateServerDataWorker) loadEnnoblements() ([]*models.Ennoblement, erro
 	})
 }
 
-func (h *updateServerDataWorker) isTheSameAsServerHistoryUpdatedAt(t time.Time) bool {
-	return t.Year() == h.server.HistoryUpdatedAt.Year() &&
-		t.Month() == h.server.HistoryUpdatedAt.Month() &&
-		t.Day() == h.server.HistoryUpdatedAt.Day()
-}
-
 func (h *updateServerDataWorker) calculateODifference(od1 models.OpponentsDefeated, od2 models.OpponentsDefeated) models.OpponentsDefeated {
 	return models.OpponentsDefeated{
 		RankAtt:    (od1.RankAtt - od2.RankAtt) * -1,
@@ -105,9 +99,6 @@ func (h *updateServerDataWorker) calculateTodaysTribeStats(tribes []*models.Trib
 	searchableTribes := makeTribesSearchable(tribes)
 
 	for _, historyRecord := range history {
-		if !h.isTheSameAsServerHistoryUpdatedAt(historyRecord.CreateDate) {
-			continue
-		}
 		if index := searchByID(searchableTribes, historyRecord.TribeID); index != -1 {
 			tribe := tribes[index]
 			todaysStats = append(todaysStats, &models.DailyTribeStats{
@@ -133,9 +124,6 @@ func (h *updateServerDataWorker) calculateDailyPlayerStats(players []*models.Pla
 	searchablePlayers := makePlayersSearchable(players)
 
 	for _, historyRecord := range history {
-		if !h.isTheSameAsServerHistoryUpdatedAt(historyRecord.CreateDate) {
-			continue
-		}
 		if index := searchByID(searchablePlayers, historyRecord.PlayerID); index != -1 {
 			player := players[index]
 			todaysStats = append(todaysStats, &models.DailyPlayerStats{
