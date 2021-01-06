@@ -13,8 +13,8 @@ import (
 
 	_cron "github.com/tribalwarshelp/cron/cron"
 
+	"github.com/go-pg/pg/extra/pgdebug"
 	"github.com/go-pg/pg/v10"
-	"github.com/go-pg/pgext"
 	"github.com/joho/godotenv"
 	"github.com/robfig/cron/v3"
 )
@@ -52,7 +52,7 @@ func main() {
 		}
 	}()
 	if strings.ToUpper(os.Getenv("LOG_DB_QUERIES")) == "TRUE" {
-		db.AddQueryHook(pgext.DebugHook{
+		db.AddQueryHook(pgdebug.DebugHook{
 			Verbose: true,
 		})
 	}
