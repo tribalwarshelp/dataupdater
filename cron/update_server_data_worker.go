@@ -265,7 +265,7 @@ func (h *updateServerDataWorker) update() error {
 			return errors.Wrap(err, "couldnt insert players")
 		}
 		if _, err := tx.Model(&models.Player{}).
-			Where("NOT (player.id  = ANY (?))", pg.Array(ids)).
+			Where("NOT (player.id = ANY (?))", pg.Array(ids)).
 			Set("exists = false").
 			Set("tribe_id = 0").
 			Update(); err != nil && err != pg.ErrNoRows {

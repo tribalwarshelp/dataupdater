@@ -51,7 +51,7 @@ const (
 		BEGIN
 			IF NEW.tribe_id <> 0 THEN
 				INSERT INTO ?0.tribe_changes(player_id,old_tribe_id,new_tribe_id,created_at)
-				VALUES(OLD.id,0,NEW.tribe_id,now());
+				VALUES(NEW.id,0,NEW.tribe_id,now());
 			END IF;
 
 			RETURN NEW;
