@@ -133,7 +133,7 @@ const (
 					NEW.best_rank = NEW.rank;
 					NEW.best_rank_at = now();
 				END IF;
-				if TG_TABLE_NAME = 'users' THEN
+				if TG_TABLE_NAME = 'players' THEN
 					IF NEW.points > OLD.points OR NEW.score_att > OLD.score_att THEN
 						NEW.last_activity_at = now();
 					END IF;
