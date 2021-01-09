@@ -293,8 +293,8 @@ func (h *updateServerDataWorker) update() error {
 				return errors.Wrap(err, "couldnt insert today's player stats")
 			}
 		}
-
 	}
+
 	if len(villages) > 0 {
 		if _, err := tx.Model(&models.Village{}).
 			Where("true").

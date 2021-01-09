@@ -44,7 +44,7 @@ func (h *handler) init() error {
 	}
 	defer tx.Close()
 
-	models := []interface{}{
+	dbModels := []interface{}{
 		(*models.SpecialServer)(nil),
 		(*models.Server)(nil),
 		(*models.Version)(nil),
@@ -52,7 +52,7 @@ func (h *handler) init() error {
 		(*models.PlayerNameChange)(nil),
 	}
 
-	for _, model := range models {
+	for _, model := range dbModels {
 		err := tx.Model(model).CreateTable(&orm.CreateTableOptions{
 			IfNotExists: true,
 		})
@@ -61,20 +61,64 @@ func (h *handler) init() error {
 		}
 	}
 
-	for _, statement := range []string{
-		pgDefaultValues,
-		allVersionsPGInsertStatements,
-		allSpecialServersPGInsertStatements,
+	type statementWithParams struct {
+		statement string
+		params    []interface{}
+	}
+
+	for _, s := range []statementWithParams{
+		{
+			statement: pgDefaultValues,
+		},
+		{
+			statement: allVersionsPGInsertStatements,
+		},
+		{
+			statement: allSpecialServersPGInsertStatements,
+		},
+		{
+			statement: pgDropSchemaFunctions,
+			params:    []interface{}{pg.Safe("public")},
+		},
+		{
+			statement: pgFunctions,
+		},
 	} {
-		if _, err := tx.Exec(statement); err != nil {
+		if _, err := tx.Exec(s.statement, s.params...); err != nil {
 			return err
 		}
 	}
 
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	servers := []*models.Server{}
+	if err := h.db.Model(&servers).Select(); err != nil {
+		return err
+	}
+
+	for _, server := range servers {
+		if err := h.createSchema(server, true); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
-func (h *handler) createSchema(server *models.Server) error {
+func (h *handler) createSchema(server *models.Server, init bool) error {
+	if !init {
+		exists, err := h.db.Model().Table("information_schema.schemata").Where("schema_name = ?", server.Key).Exists()
+		if err != nil {
+			return err
+		}
+
+		if exists {
+			return nil
+		}
+	}
+
 	tx, err := h.db.WithParam("SERVER", pg.Safe(server.Key)).Begin()
 	if err != nil {
 		return err
@@ -85,7 +129,7 @@ func (h *handler) createSchema(server *models.Server) error {
 		return err
 	}
 
-	models := []interface{}{
+	dbModels := []interface{}{
 		(*models.Tribe)(nil),
 		(*models.Player)(nil),
 		(*models.Village)(nil),
@@ -98,7 +142,7 @@ func (h *handler) createSchema(server *models.Server) error {
 		(*models.DailyTribeStats)(nil),
 	}
 
-	for _, model := range models {
+	for _, model := range dbModels {
 		err := tx.Model(model).CreateTable(&orm.CreateTableOptions{
 			IfNotExists: true,
 		})
@@ -107,11 +151,15 @@ func (h *handler) createSchema(server *models.Server) error {
 		}
 	}
 
-	for _, statement := range []string{
+	statements := []string{
 		serverPGFunctions,
 		serverPGTriggers,
 		serverPGDefaultValues,
-	} {
+	}
+	if init {
+		statements = append([]string{pgDropSchemaFunctions}, statements...)
+	}
+	for _, statement := range statements {
 		if _, err := tx.Exec(statement, pg.Safe(server.Key), server.VersionCode); err != nil {
 			return err
 		}
@@ -160,7 +208,7 @@ func (h *handler) getServers() ([]*models.Server, map[string]string, error) {
 				VersionCode: version.Code,
 				Version:     version,
 			}
-			if err := h.createSchema(server); err != nil {
+			if err := h.createSchema(server, false); err != nil {
 				log.WithField("serverKey", serverKey).Errorln(errors.Wrapf(err, "Cannot create schema for %s", serverKey))
 				continue
 			}
