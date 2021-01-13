@@ -183,18 +183,18 @@ func (h *handler) getServers() ([]*models.Server, map[string]string, error) {
 		log.Infof("Loading servers from %s", version.Host)
 		resp, err := http.Get(fmt.Sprintf("https://%s%s", version.Host, endpointGetServers))
 		if err != nil {
-			log.Errorln(errors.Wrapf(err, "Cannot fetch servers from %s", version.Host))
+			log.Errorln(errors.Wrapf(err, "fetching servers from %s", version.Host))
 			continue
 		}
 		defer resp.Body.Close()
 		bodyBytes, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			log.Errorln(errors.Wrapf(err, "Cannot read response body from %s", version.Host))
+			log.Errorln(errors.Wrapf(err, "reading response body from %s", version.Host))
 			continue
 		}
 		body, err := phpserialize.Decode(string(bodyBytes))
 		if err != nil {
-			log.Errorln(errors.Wrapf(err, "Cannot serialize body from %s into go value", version.Host))
+			log.Errorln(errors.Wrapf(err, "serializing body from %s into go value", version.Host))
 			continue
 		}
 		for serverKey, url := range body.(map[interface{}]interface{}) {
@@ -209,7 +209,7 @@ func (h *handler) getServers() ([]*models.Server, map[string]string, error) {
 				Version:     version,
 			}
 			if err := h.createSchema(server, false); err != nil {
-				log.WithField("serverKey", serverKey).Errorln(errors.Wrapf(err, "Cannot create schema for %s", serverKey))
+				log.WithField("serverKey", serverKey).Errorln(errors.Wrapf(err, "cannot create schema for %s", serverKey))
 				continue
 			}
 			serverKeys = append(serverKeys, serverKeyStr)

@@ -21,7 +21,7 @@ func (h *updateServerDataWorker) loadPlayers(od map[int]*models.OpponentsDefeate
 	ennoblements := []*models.Ennoblement{}
 	err := h.db.Model(&ennoblements).DistinctOn("new_owner_id").Order("new_owner_id ASC", "ennobled_at ASC").Select()
 	if err != nil {
-		return nil, errors.Wrap(err, "loadPlayers: Couldn't load ennoblements")
+		return nil, errors.Wrap(err, "loadPlayers: cannot load ennoblements")
 	}
 
 	players, err := h.dataloader.LoadPlayers()
@@ -72,7 +72,7 @@ func (h *updateServerDataWorker) loadEnnoblements() ([]*models.Ennoblement, erro
 		Limit(1).
 		Order("ennobled_at DESC").
 		Select(); err != nil && err != pg.ErrNoRows {
-		return nil, errors.Wrapf(err, "couldnt load last ennoblement")
+		return nil, errors.Wrapf(err, "cannot load last ennoblement")
 	}
 
 	return h.dataloader.LoadEnnoblements(&dataloader.LoadEnnoblementsConfig{
@@ -211,13 +211,13 @@ func (h *updateServerDataWorker) update() error {
 			Set("dominance = EXCLUDED.dominance").
 			Apply(appendODSetClauses).
 			Insert(); err != nil {
-			return errors.Wrap(err, "couldnt insert tribes")
+			return errors.Wrap(err, "cannot insert tribes")
 		}
 		if _, err := tx.Model(&tribes).
 			Where("NOT (tribe.id  = ANY (?))", pg.Array(ids)).
 			Set("exists = false").
 			Update(); err != nil && err != pg.ErrNoRows {
-			return errors.Wrap(err, "couldnt update nonexistent tribes")
+			return errors.Wrap(err, "cannot update nonexistent tribes")
 		}
 
 		tribesHistory := []*models.TribeHistory{}
@@ -227,7 +227,7 @@ func (h *updateServerDataWorker) update() error {
 			Where("tribe_id = ANY (?)", pg.Array(ids)).
 			Order("tribe_id DESC", "create_date DESC").
 			Select(); err != nil && err != pg.ErrNoRows {
-			return errors.Wrap(err, "couldnt select tribe history records")
+			return errors.Wrap(err, "cannot select tribe history records")
 		}
 		todaysTribeStats := h.calculateTodaysTribeStats(tribes, tribesHistory)
 		if len(todaysTribeStats) > 0 {
@@ -242,7 +242,7 @@ func (h *updateServerDataWorker) update() error {
 				Set("dominance = EXCLUDED.dominance").
 				Apply(appendODSetClauses).
 				Insert(); err != nil {
-				return errors.Wrap(err, "couldnt insert today's tribe stats")
+				return errors.Wrap(err, "cannot insert today's tribe stats")
 			}
 		}
 	}
@@ -262,14 +262,14 @@ func (h *updateServerDataWorker) update() error {
 			Set("daily_growth = EXCLUDED.daily_growth").
 			Apply(appendODSetClauses).
 			Insert(); err != nil {
-			return errors.Wrap(err, "couldnt insert players")
+			return errors.Wrap(err, "cannot insert players")
 		}
 		if _, err := tx.Model(&models.Player{}).
 			Where("NOT (player.id = ANY (?))", pg.Array(ids)).
 			Set("exists = false").
 			Set("tribe_id = 0").
 			Update(); err != nil && err != pg.ErrNoRows {
-			return errors.Wrap(err, "couldnt update nonexistent players")
+			return errors.Wrap(err, "cannot update nonexistent players")
 		}
 
 		playerHistory := []*models.PlayerHistory{}
@@ -278,7 +278,7 @@ func (h *updateServerDataWorker) update() error {
 			Column("*").
 			Where("player_id = ANY (?)", pg.Array(ids)).
 			Order("player_id DESC", "create_date DESC").Select(); err != nil && err != pg.ErrNoRows {
-			return errors.Wrap(err, "couldnt select player history records")
+			return errors.Wrap(err, "cannot select player history records")
 		}
 		todaysPlayerStats := h.calculateDailyPlayerStats(players, playerHistory)
 		if len(todaysPlayerStats) > 0 {
@@ -290,7 +290,7 @@ func (h *updateServerDataWorker) update() error {
 				Set("rank = EXCLUDED.rank").
 				Apply(appendODSetClauses).
 				Insert(); err != nil {
-				return errors.Wrap(err, "couldnt insert today's player stats")
+				return errors.Wrap(err, "cannot insert today's player stats")
 			}
 		}
 	}
@@ -299,7 +299,7 @@ func (h *updateServerDataWorker) update() error {
 		if _, err := tx.Model(&models.Village{}).
 			Where("true").
 			Delete(); err != nil && err != pg.ErrNoRows {
-			return errors.Wrap(err, "couldnt delete villages")
+			return errors.Wrap(err, "cannot delete villages")
 		}
 		if _, err := tx.Model(&villages).
 			OnConflict("(id) DO UPDATE").
@@ -310,12 +310,12 @@ func (h *updateServerDataWorker) update() error {
 			Set("bonus = EXCLUDED.bonus").
 			Set("player_id = EXCLUDED.player_id").
 			Insert(); err != nil {
-			return errors.Wrap(err, "couldnt insert villages")
+			return errors.Wrap(err, "cannot insert villages")
 		}
 	}
 	if len(ennoblements) > 0 {
 		if _, err := tx.Model(&ennoblements).Insert(); err != nil {
-			return errors.Wrap(err, "couldnt insert ennoblements")
+			return errors.Wrap(err, "cannot insert ennoblements")
 		}
 	}
 
@@ -330,7 +330,7 @@ func (h *updateServerDataWorker) update() error {
 		Returning("*").
 		WherePK().
 		Update(); err != nil {
-		return errors.Wrap(err, "couldnt update server")
+		return errors.Wrap(err, "cannot update server")
 	}
 
 	if err := tx.Commit(); err != nil {

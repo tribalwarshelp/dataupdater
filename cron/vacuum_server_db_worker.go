@@ -31,7 +31,7 @@ func (h *vacuumServerDBWorker) vacuum() error {
 		Where("player_id IN (Select id FROM players) OR player_history.create_date < ?", time.Now().Add(-1*day*180)).
 		Delete()
 	if err != nil {
-		return errors.Wrap(err, "couldnt delete old player history records")
+		return errors.Wrap(err, "cannot delete old player history records")
 	}
 
 	_, err = tx.Model(&models.TribeHistory{}).
@@ -39,7 +39,7 @@ func (h *vacuumServerDBWorker) vacuum() error {
 		Where("tribe_id IN (Select id FROM tribes) OR tribe_history.create_date < ?", time.Now().Add(-1*day*180)).
 		Delete()
 	if err != nil {
-		return errors.Wrap(err, "couldnt delete old tribe history records")
+		return errors.Wrap(err, "cannot delete old tribe history records")
 	}
 
 	_, err = tx.Model(&models.DailyPlayerStats{}).
@@ -47,7 +47,7 @@ func (h *vacuumServerDBWorker) vacuum() error {
 		Where("player_id IN (Select id FROM players) OR daily_player_stats.create_date < ?", time.Now().Add(-1*day*180)).
 		Delete()
 	if err != nil {
-		return errors.Wrap(err, "couldnt delete old player stats records")
+		return errors.Wrap(err, "cannot delete old player stats records")
 	}
 
 	_, err = tx.Model(&models.DailyTribeStats{}).
@@ -55,7 +55,7 @@ func (h *vacuumServerDBWorker) vacuum() error {
 		Where("tribe_id IN (Select id FROM tribes) OR daily_tribe_stats.create_date < ?", time.Now().Add(-1*day*180)).
 		Delete()
 	if err != nil {
-		return errors.Wrap(err, "couldnt delete old tribe stats records")
+		return errors.Wrap(err, "cannot delete old tribe stats records")
 	}
 
 	return tx.Commit()
