@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"os"
 	"os/signal"
 	"strconv"
@@ -59,7 +58,7 @@ func main() {
 	logrus.WithFields(dbFields).Info("Connected to the database")
 
 	c := cron.New(cron.WithChain(
-		cron.SkipIfStillRunning(cron.VerbosePrintfLogger(log.New(os.Stdout, "cron: ", log.LstdFlags))),
+		cron.SkipIfStillRunning(cron.PrintfLogger(logrus.WithField("package", "cron"))),
 	))
 	if err := _cron.Attach(c, _cron.Config{
 		DB:                   db,

@@ -36,6 +36,7 @@ func Attach(c *cron.Cron, cfg Config) error {
 
 	updateServerData := utils.TrackExecutionTime(log, h.updateServerData, "updateServerData")
 	vacuumDatabase := utils.TrackExecutionTime(log, h.vacuumDatabase, "vacuumDatabase")
+	updateServerEnnoblements := utils.TrackExecutionTime(log, h.updateServerEnnoblements, "updateServerEnnoblements")
 	updateHistoryFuncs := []func(){}
 	updateStatsFuncs := []func(){}
 	for _, version := range versions {
@@ -60,6 +61,9 @@ func Attach(c *cron.Cron, cfg Config) error {
 		return err
 	}
 	if _, err := c.AddFunc("20 1 * * *", vacuumDatabase); err != nil {
+		return err
+	}
+	if _, err := c.AddFunc("@every 1m", updateServerEnnoblements); err != nil {
 		return err
 	}
 	if cfg.RunOnStartup {

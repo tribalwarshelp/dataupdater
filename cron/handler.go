@@ -266,6 +266,9 @@ func (h *handler) updateServerData() {
 			server: server,
 			dataloader: dataloader.New(&dataloader.Config{
 				BaseURL: url,
+				Client: &http.Client{
+					Timeout: 10 * time.Second,
+				},
 			}),
 		}
 		go func(worker *updateServerDataWorker, server *models.Server, url string, log *logrus.Entry) {
@@ -281,6 +284,45 @@ func (h *handler) updateServerData() {
 			}
 			log.Infof("updateServerData: %s: data updated", server.Key)
 		}(sh, server, url, log)
+	}
+
+	wg.Wait()
+}
+
+func (h *handler) updateServerEnnoblements() {
+	servers := []*models.Server{}
+	if err := h.db.Model(&servers).Relation("Version").Where("status = ?", models.ServerStatusOpen).Select(); err != nil {
+		log.Error(errors.Wrap(err, "updateServerEnnoblements: cannot load ennoblements"))
+	}
+	log.
+		WithField("numberOfServers", len(servers)).
+		Info("updateServerEnnoblements: servers loaded")
+	var wg sync.WaitGroup
+
+	for _, server := range servers {
+		h.pool.waitForWorker()
+		wg.Add(1)
+		sh := &updateServerEnnoblementsWorker{
+			db:     h.db.WithParam("SERVER", pg.Safe(server.Key)),
+			server: server,
+			dataloader: dataloader.New(&dataloader.Config{
+				BaseURL: fmt.Sprintf("https://%s.%s", server.Key, server.Version.Host),
+			}),
+		}
+		go func(worker *updateServerEnnoblementsWorker, server *models.Server) {
+			defer func() {
+				h.pool.releaseWorker()
+				wg.Done()
+			}()
+			log := log.WithField("serverKey", server.Key)
+			log.Infof("updateServerEnnoblements: %s: updating ennoblements", server.Key)
+			err := sh.update()
+			if err != nil {
+				log.Errorln("updateServerEnnoblements:", errors.Wrap(err, server.Key))
+				return
+			}
+			log.Infof("updateServerEnnoblements: %s: ennoblements updated", server.Key)
+		}(sh, server)
 	}
 
 	wg.Wait()

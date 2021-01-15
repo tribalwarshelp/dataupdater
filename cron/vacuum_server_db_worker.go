@@ -16,15 +16,15 @@ type vacuumServerDBWorker struct {
 	db *pg.DB
 }
 
-func (h *vacuumServerDBWorker) vacuum() error {
-	tx, err := h.db.Begin()
+func (w *vacuumServerDBWorker) vacuum() error {
+	tx, err := w.db.Begin()
 	if err != nil {
 		return err
 	}
 	defer tx.Close()
 
-	withNonExistentPlayers := h.db.Model(&models.Player{}).Column("id").Where("exists = false and NOW() - deleted_at > '14 days'")
-	withNonExistentTribes := h.db.Model(&models.Tribe{}).Column("id").Where("exists = false and NOW() - deleted_at > '1 days'")
+	withNonExistentPlayers := w.db.Model(&models.Player{}).Column("id").Where("exists = false and NOW() - deleted_at > '14 days'")
+	withNonExistentTribes := w.db.Model(&models.Tribe{}).Column("id").Where("exists = false and NOW() - deleted_at > '1 days'")
 
 	_, err = tx.Model(&models.PlayerHistory{}).
 		With("players", withNonExistentPlayers).

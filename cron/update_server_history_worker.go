@@ -14,13 +14,13 @@ type updateServerHistoryWorker struct {
 	location *time.Location
 }
 
-func (h *updateServerHistoryWorker) update() error {
+func (w *updateServerHistoryWorker) update() error {
 	players := []*models.Player{}
-	if err := h.db.Model(&players).Where("exists = true").Select(); err != nil {
+	if err := w.db.Model(&players).Where("exists = true").Select(); err != nil {
 		return errors.Wrap(err, "cannot load players")
 	}
 
-	now := time.Now().In(h.location)
+	now := time.Now().In(w.location)
 	createDate := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
 	ph := []*models.PlayerHistory{}
 	for _, player := range players {
@@ -36,7 +36,7 @@ func (h *updateServerHistoryWorker) update() error {
 	}
 
 	tribes := []*models.Tribe{}
-	if err := h.db.Model(&tribes).Where("exists = true").Select(); err != nil {
+	if err := w.db.Model(&tribes).Where("exists = true").Select(); err != nil {
 		return errors.Wrap(err, "cannot load tribes")
 	}
 	th := []*models.TribeHistory{}
@@ -54,25 +54,25 @@ func (h *updateServerHistoryWorker) update() error {
 		})
 	}
 
-	tx, err := h.db.Begin()
+	tx, err := w.db.Begin()
 	if err != nil {
 		return err
 	}
 	defer tx.Close()
 
 	if len(ph) > 0 {
-		if _, err := h.db.Model(&ph).Insert(); err != nil {
+		if _, err := w.db.Model(&ph).Insert(); err != nil {
 			return errors.Wrap(err, "cannot insert players history")
 		}
 	}
 
 	if len(th) > 0 {
-		if _, err := h.db.Model(&th).Insert(); err != nil {
+		if _, err := w.db.Model(&th).Insert(); err != nil {
 			return errors.Wrap(err, "cannot insert tribes history")
 		}
 	}
 
-	if _, err := tx.Model(h.server).
+	if _, err := tx.Model(w.server).
 		Set("history_updated_at = ?", time.Now()).
 		WherePK().
 		Returning("*").
