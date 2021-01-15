@@ -297,10 +297,11 @@ func (h *handler) updateServerEnnoblements() {
 	log.
 		WithField("numberOfServers", len(servers)).
 		Info("updateServerEnnoblements: servers loaded")
-	var wg sync.WaitGroup
 
+	var wg sync.WaitGroup
+	pool := newPool(h.maxConcurrentWorkers)
 	for _, server := range servers {
-		h.pool.waitForWorker()
+		pool.waitForWorker()
 		wg.Add(1)
 		sh := &updateServerEnnoblementsWorker{
 			db:     h.db.WithParam("SERVER", pg.Safe(server.Key)),
@@ -311,7 +312,7 @@ func (h *handler) updateServerEnnoblements() {
 		}
 		go func(worker *updateServerEnnoblementsWorker, server *models.Server) {
 			defer func() {
-				h.pool.releaseWorker()
+				pool.releaseWorker()
 				wg.Done()
 			}()
 			log := log.WithField("serverKey", server.Key)
@@ -324,7 +325,6 @@ func (h *handler) updateServerEnnoblements() {
 			log.Infof("updateServerEnnoblements: %s: ennoblements updated", server.Key)
 		}(sh, server)
 	}
-
 	wg.Wait()
 }
 
