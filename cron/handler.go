@@ -316,13 +316,11 @@ func (h *handler) updateServerEnnoblements() {
 				wg.Done()
 			}()
 			log := log.WithField("serverKey", server.Key)
-			log.Infof("updateServerEnnoblements: %s: updating ennoblements", server.Key)
 			err := sh.update()
 			if err != nil {
 				log.Errorln("updateServerEnnoblements:", errors.Wrap(err, server.Key))
 				return
 			}
-			log.Infof("updateServerEnnoblements: %s: ennoblements updated", server.Key)
 		}(sh, server)
 	}
 	wg.Wait()
