@@ -17,14 +17,14 @@ type updateServerDataWorker struct {
 	server     *models.Server
 }
 
-func (h *updateServerDataWorker) loadPlayers(od map[int]*models.OpponentsDefeated) ([]*models.Player, error) {
+func (w *updateServerDataWorker) loadPlayers(od map[int]*models.OpponentsDefeated) ([]*models.Player, error) {
 	ennoblements := []*models.Ennoblement{}
-	err := h.db.Model(&ennoblements).DistinctOn("new_owner_id").Order("new_owner_id ASC", "ennobled_at ASC").Select()
+	err := w.db.Model(&ennoblements).DistinctOn("new_owner_id").Order("new_owner_id ASC", "ennobled_at ASC").Select()
 	if err != nil {
 		return nil, errors.Wrap(err, "loadPlayers: cannot load ennoblements")
 	}
 
-	players, err := h.dataloader.LoadPlayers()
+	players, err := w.dataloader.LoadPlayers()
 	if err != nil {
 		return nil, err
 	}
@@ -46,8 +46,8 @@ func (h *updateServerDataWorker) loadPlayers(od map[int]*models.OpponentsDefeate
 	return players, nil
 }
 
-func (h *updateServerDataWorker) loadTribes(od map[int]*models.OpponentsDefeated, numberOfVillages int) ([]*models.Tribe, error) {
-	tribes, err := h.dataloader.LoadTribes()
+func (w *updateServerDataWorker) loadTribes(od map[int]*models.OpponentsDefeated, numberOfVillages int) ([]*models.Tribe, error) {
+	tribes, err := w.dataloader.LoadTribes()
 	if err != nil {
 		return nil, err
 	}
@@ -65,22 +65,7 @@ func (h *updateServerDataWorker) loadTribes(od map[int]*models.OpponentsDefeated
 	return tribes, nil
 }
 
-func (h *updateServerDataWorker) loadEnnoblements() ([]*models.Ennoblement, error) {
-	lastEnnoblement := &models.Ennoblement{}
-	if err := h.db.
-		Model(lastEnnoblement).
-		Limit(1).
-		Order("ennobled_at DESC").
-		Select(); err != nil && err != pg.ErrNoRows {
-		return nil, errors.Wrapf(err, "cannot load last ennoblement")
-	}
-
-	return h.dataloader.LoadEnnoblements(&dataloader.LoadEnnoblementsConfig{
-		EnnobledAtGTE: lastEnnoblement.EnnobledAt,
-	})
-}
-
-func (h *updateServerDataWorker) calculateODifference(od1 models.OpponentsDefeated, od2 models.OpponentsDefeated) models.OpponentsDefeated {
+func (w *updateServerDataWorker) calculateODifference(od1 models.OpponentsDefeated, od2 models.OpponentsDefeated) models.OpponentsDefeated {
 	return models.OpponentsDefeated{
 		RankAtt:    (od1.RankAtt - od2.RankAtt) * -1,
 		ScoreAtt:   od1.ScoreAtt - od2.ScoreAtt,
@@ -93,7 +78,7 @@ func (h *updateServerDataWorker) calculateODifference(od1 models.OpponentsDefeat
 	}
 }
 
-func (h *updateServerDataWorker) calculateTodaysTribeStats(tribes []*models.Tribe,
+func (w *updateServerDataWorker) calculateTodaysTribeStats(tribes []*models.Tribe,
 	history []*models.TribeHistory) []*models.DailyTribeStats {
 	todaysStats := []*models.DailyTribeStats{}
 	searchableTribes := makeTribesSearchable(tribes)
@@ -110,7 +95,7 @@ func (h *updateServerDataWorker) calculateTodaysTribeStats(tribes []*models.Trib
 				Rank:              (tribe.Rank - historyRecord.Rank) * -1,
 				Dominance:         tribe.Dominance - historyRecord.Dominance,
 				CreateDate:        historyRecord.CreateDate,
-				OpponentsDefeated: h.calculateODifference(tribe.OpponentsDefeated, historyRecord.OpponentsDefeated),
+				OpponentsDefeated: w.calculateODifference(tribe.OpponentsDefeated, historyRecord.OpponentsDefeated),
 			})
 		}
 	}
@@ -118,7 +103,7 @@ func (h *updateServerDataWorker) calculateTodaysTribeStats(tribes []*models.Trib
 	return todaysStats
 }
 
-func (h *updateServerDataWorker) calculateDailyPlayerStats(players []*models.Player,
+func (w *updateServerDataWorker) calculateDailyPlayerStats(players []*models.Player,
 	history []*models.PlayerHistory) []*models.DailyPlayerStats {
 	todaysStats := []*models.DailyPlayerStats{}
 	searchablePlayers := makePlayersSearchable(players)
@@ -132,7 +117,7 @@ func (h *updateServerDataWorker) calculateDailyPlayerStats(players []*models.Pla
 				Points:            player.Points - historyRecord.Points,
 				Rank:              (player.Rank - historyRecord.Rank) * -1,
 				CreateDate:        historyRecord.CreateDate,
-				OpponentsDefeated: h.calculateODifference(player.OpponentsDefeated, historyRecord.OpponentsDefeated),
+				OpponentsDefeated: w.calculateODifference(player.OpponentsDefeated, historyRecord.OpponentsDefeated),
 			})
 		}
 	}
@@ -140,53 +125,48 @@ func (h *updateServerDataWorker) calculateDailyPlayerStats(players []*models.Pla
 	return todaysStats
 }
 
-func (h *updateServerDataWorker) update() error {
-	pod, err := h.dataloader.LoadOD(false)
+func (w *updateServerDataWorker) update() error {
+	pod, err := w.dataloader.LoadOD(false)
 	if err != nil {
 		return err
 	}
-	tod, err := h.dataloader.LoadOD(true)
-	if err != nil {
-		return err
-	}
-
-	ennoblements, err := h.loadEnnoblements()
+	tod, err := w.dataloader.LoadOD(true)
 	if err != nil {
 		return err
 	}
 
-	villages, err := h.dataloader.LoadVillages()
+	villages, err := w.dataloader.LoadVillages()
 	if err != nil {
 		return err
 	}
 	numberOfVillages := len(villages)
 
-	tribes, err := h.loadTribes(tod, countPlayerVillages(villages))
+	tribes, err := w.loadTribes(tod, countPlayerVillages(villages))
 	if err != nil {
 		return err
 	}
 	numberOfTribes := len(tribes)
 
-	players, err := h.loadPlayers(pod)
+	players, err := w.loadPlayers(pod)
 	if err != nil {
 		return err
 	}
 	numberOfPlayers := len(players)
 
-	cfg, err := h.dataloader.GetConfig()
+	cfg, err := w.dataloader.GetConfig()
 	if err != nil {
 		return err
 	}
-	buildingCfg, err := h.dataloader.GetBuildingConfig()
+	buildingCfg, err := w.dataloader.GetBuildingConfig()
 	if err != nil {
 		return err
 	}
-	unitCfg, err := h.dataloader.GetUnitConfig()
+	unitCfg, err := w.dataloader.GetUnitConfig()
 	if err != nil {
 		return err
 	}
 
-	tx, err := h.db.Begin()
+	tx, err := w.db.Begin()
 	if err != nil {
 		return err
 	}
@@ -221,7 +201,7 @@ func (h *updateServerDataWorker) update() error {
 		}
 
 		tribesHistory := []*models.TribeHistory{}
-		if err := h.db.Model(&tribesHistory).
+		if err := w.db.Model(&tribesHistory).
 			DistinctOn("tribe_id").
 			Column("*").
 			Where("tribe_id = ANY (?)", pg.Array(ids)).
@@ -229,7 +209,7 @@ func (h *updateServerDataWorker) update() error {
 			Select(); err != nil && err != pg.ErrNoRows {
 			return errors.Wrap(err, "cannot select tribe history records")
 		}
-		todaysTribeStats := h.calculateTodaysTribeStats(tribes, tribesHistory)
+		todaysTribeStats := w.calculateTodaysTribeStats(tribes, tribesHistory)
 		if len(todaysTribeStats) > 0 {
 			if _, err := tx.
 				Model(&todaysTribeStats).
@@ -246,6 +226,7 @@ func (h *updateServerDataWorker) update() error {
 			}
 		}
 	}
+
 	if len(players) > 0 {
 		ids := []int{}
 		for _, player := range players {
@@ -273,14 +254,14 @@ func (h *updateServerDataWorker) update() error {
 		}
 
 		playerHistory := []*models.PlayerHistory{}
-		if err := h.db.Model(&playerHistory).
+		if err := w.db.Model(&playerHistory).
 			DistinctOn("player_id").
 			Column("*").
 			Where("player_id = ANY (?)", pg.Array(ids)).
 			Order("player_id DESC", "create_date DESC").Select(); err != nil && err != pg.ErrNoRows {
 			return errors.Wrap(err, "cannot select player history records")
 		}
-		todaysPlayerStats := h.calculateDailyPlayerStats(players, playerHistory)
+		todaysPlayerStats := w.calculateDailyPlayerStats(players, playerHistory)
 		if len(todaysPlayerStats) > 0 {
 			if _, err := tx.
 				Model(&todaysPlayerStats).
@@ -313,13 +294,8 @@ func (h *updateServerDataWorker) update() error {
 			return errors.Wrap(err, "cannot insert villages")
 		}
 	}
-	if len(ennoblements) > 0 {
-		if _, err := tx.Model(&ennoblements).Insert(); err != nil {
-			return errors.Wrap(err, "cannot insert ennoblements")
-		}
-	}
 
-	if _, err := tx.Model(h.server).
+	if _, err := tx.Model(w.server).
 		Set("data_updated_at = ?", time.Now()).
 		Set("unit_config = ?", unitCfg).
 		Set("building_config = ?", buildingCfg).

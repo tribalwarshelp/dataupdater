@@ -14,45 +14,45 @@ type updateServerStatsWorker struct {
 	location *time.Location
 }
 
-func (h *updateServerStatsWorker) prepare() (*models.ServerStats, error) {
-	activePlayers, err := h.db.Model(&models.Player{}).Where("exists = true").Count()
+func (w *updateServerStatsWorker) prepare() (*models.ServerStats, error) {
+	activePlayers, err := w.db.Model(&models.Player{}).Where("exists = true").Count()
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot count active players")
 	}
-	inactivePlayers, err := h.db.Model(&models.Player{}).Where("exists = false").Count()
+	inactivePlayers, err := w.db.Model(&models.Player{}).Where("exists = false").Count()
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot count inactive players")
 	}
 	players := activePlayers + inactivePlayers
 
-	activeTribes, err := h.db.Model(&models.Tribe{}).Where("exists = true").Count()
+	activeTribes, err := w.db.Model(&models.Tribe{}).Where("exists = true").Count()
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot count active tribes")
 	}
-	inactiveTribes, err := h.db.Model(&models.Tribe{}).Where("exists = false").Count()
+	inactiveTribes, err := w.db.Model(&models.Tribe{}).Where("exists = false").Count()
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot count inactive tribes")
 	}
 	tribes := activeTribes + inactiveTribes
 
-	barbarianVillages, err := h.db.Model(&models.Village{}).Where("player_id = 0").Count()
+	barbarianVillages, err := w.db.Model(&models.Village{}).Where("player_id = 0").Count()
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot count barbarian villages")
 	}
-	bonusVillages, err := h.db.Model(&models.Village{}).Where("bonus <> 0").Count()
+	bonusVillages, err := w.db.Model(&models.Village{}).Where("bonus <> 0").Count()
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot count bonus villages")
 	}
-	playerVillages, err := h.db.Model(&models.Village{}).Where("player_id <> 0").Count()
+	playerVillages, err := w.db.Model(&models.Village{}).Where("player_id <> 0").Count()
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot count player villages")
 	}
-	villages, err := h.db.Model(&models.Village{}).Count()
+	villages, err := w.db.Model(&models.Village{}).Count()
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot count villages")
 	}
 
-	now := time.Now().In(h.location)
+	now := time.Now().In(w.location)
 	createDate := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
 	return &models.ServerStats{
 		ActivePlayers:   activePlayers,
@@ -71,13 +71,13 @@ func (h *updateServerStatsWorker) prepare() (*models.ServerStats, error) {
 	}, nil
 }
 
-func (h *updateServerStatsWorker) update() error {
-	stats, err := h.prepare()
+func (w *updateServerStatsWorker) update() error {
+	stats, err := w.prepare()
 	if err != nil {
 		return err
 	}
 
-	tx, err := h.db.Begin()
+	tx, err := w.db.Begin()
 	if err != nil {
 		return err
 	}
@@ -87,7 +87,7 @@ func (h *updateServerStatsWorker) update() error {
 		return errors.Wrap(err, "cannot insert server stats")
 	}
 
-	_, err = tx.Model(h.server).
+	_, err = tx.Model(w.server).
 		Set("stats_updated_at = ?", time.Now()).
 		WherePK().
 		Returning("*").
