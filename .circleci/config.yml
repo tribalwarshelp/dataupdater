@@ -3,7 +3,7 @@ jobs:
   build:
     docker:
       - image: circleci/golang:1.15
-    working_directory: ~/twhelpdcbot
+    working_directory: ~/twhelpcron
     steps:
       - checkout
       - setup_remote_docker
