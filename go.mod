@@ -1,6 +1,6 @@
 module github.com/tribalwarshelp/cron
 
-go 1.14
+go 1.16
 
 require (
 	github.com/Kichiyaki/go-php-serialize v0.0.0-20200601110855-47b6982acf83
