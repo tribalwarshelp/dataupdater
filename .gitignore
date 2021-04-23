@@ -1,4 +1,4 @@
-.env.development
+.env.local
 .netrc
 todo.sql
 .idea
