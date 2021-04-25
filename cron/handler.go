@@ -2,16 +2,13 @@ package cron
 
 import (
 	"context"
-	"fmt"
 	"runtime"
 	"sync"
 	"time"
 
-	"github.com/tribalwarshelp/shared/models"
-	"github.com/tribalwarshelp/shared/tw/dataloader"
-
 	"github.com/go-pg/pg/v10"
 	"github.com/pkg/errors"
+	"github.com/tribalwarshelp/shared/models"
 
 	"github.com/tribalwarshelp/cron/cron/queue"
 	"github.com/tribalwarshelp/cron/cron/tasks"
@@ -40,41 +37,8 @@ func (h *handler) updateServerData() {
 	h.queue.Add(queue.MainQueue, tasks.Get(tasks.TaskNameLoadVersionsAndUpdateServerData).WithArgs(context.Background()))
 }
 
-func (h *handler) updateServerEnnoblements() {
-	servers := []*models.Server{}
-	if err := h.db.Model(&servers).Relation("Version").Where("status = ?", models.ServerStatusOpen).Select(); err != nil {
-		log.Error(errors.Wrap(err, "updateServerEnnoblements: cannot load ennoblements"))
-	}
-	log.
-		WithField("numberOfServers", len(servers)).
-		Info("updateServerEnnoblements: servers loaded")
-
-	var wg sync.WaitGroup
-	pool := newPool(h.maxConcurrentWorkers)
-	for _, server := range servers {
-		pool.waitForWorker()
-		wg.Add(1)
-		sh := &updateServerEnnoblementsWorker{
-			db:     h.db.WithParam("SERVER", pg.Safe(server.Key)),
-			server: server,
-			dataloader: dataloader.New(&dataloader.Config{
-				BaseURL: fmt.Sprintf("https://%s.%s", server.Key, server.Version.Host),
-			}),
-		}
-		go func(worker *updateServerEnnoblementsWorker, server *models.Server) {
-			defer func() {
-				pool.releaseWorker()
-				wg.Done()
-			}()
-			log := log.WithField("serverKey", server.Key)
-			err := sh.update()
-			if err != nil {
-				log.Errorln("updateServerEnnoblements:", errors.Wrap(err, server.Key))
-				return
-			}
-		}(sh, server)
-	}
-	wg.Wait()
+func (h *handler) updateEnnoblements() {
+	h.queue.Add(queue.MainQueue, tasks.Get(tasks.TaskUpdateEnnoblements).WithArgs(context.Background()))
 }
 
 func (h *handler) updateHistory(location *time.Location) {

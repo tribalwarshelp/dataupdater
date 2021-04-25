@@ -64,13 +64,13 @@ func Attach(c *cron.Cron, cfg Config) error {
 	if _, err := c.AddFunc("20 1 * * *", h.vacuumDatabase); err != nil {
 		return err
 	}
-	if _, err := c.AddFunc("@every 1m", h.updateServerEnnoblements); err != nil {
+	if _, err := c.AddFunc("@every 1m", h.updateEnnoblements); err != nil {
 		return err
 	}
 	if cfg.RunOnStartup {
 		go func() {
 			//h.updateServerData()
-			h.vacuumDatabase()
+			//h.vacuumDatabase()
 			//for _, fn := range updateHistoryFuncs {
 			//	go fn()
 			//}
