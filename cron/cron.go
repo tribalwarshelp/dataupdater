@@ -9,6 +9,8 @@ import (
 	"github.com/go-pg/pg/v10"
 	"github.com/robfig/cron/v3"
 	"github.com/sirupsen/logrus"
+
+	"github.com/tribalwarshelp/cron/cron/queue"
 )
 
 var log = logrus.WithField("package", "cron")
@@ -17,11 +19,15 @@ type Config struct {
 	DB                   *pg.DB
 	MaxConcurrentWorkers int
 	RunOnStartup         bool
+	Queue                queue.Queue
 }
 
 func Attach(c *cron.Cron, cfg Config) error {
 	if cfg.DB == nil {
 		return fmt.Errorf("cfg.DB cannot be nil, expected *pg.DB")
+	}
+	if cfg.Queue == nil {
+		return fmt.Errorf("cfg.Queue cannot be nil, expected queue.Queue")
 	}
 
 	h := &handler{db: cfg.DB, maxConcurrentWorkers: cfg.MaxConcurrentWorkers}
@@ -29,7 +35,7 @@ func Attach(c *cron.Cron, cfg Config) error {
 		return err
 	}
 
-	versions := []*models.Version{}
+	var versions []*models.Version
 	if err := cfg.DB.Model(&versions).DistinctOn("timezone").Select(); err != nil {
 		return err
 	}
@@ -37,8 +43,8 @@ func Attach(c *cron.Cron, cfg Config) error {
 	updateServerData := utils.TrackExecutionTime(log, h.updateServerData, "updateServerData")
 	vacuumDatabase := utils.TrackExecutionTime(log, h.vacuumDatabase, "vacuumDatabase")
 	updateServerEnnoblements := utils.TrackExecutionTime(log, h.updateServerEnnoblements, "updateServerEnnoblements")
-	updateHistoryFuncs := []func(){}
-	updateStatsFuncs := []func(){}
+	var updateHistoryFuncs []func()
+	var updateStatsFuncs []func()
 	for _, version := range versions {
 		updateHistory := utils.TrackExecutionTime(log,
 			createFnWithTimezone(version.Timezone, h.updateHistory),
@@ -69,13 +75,13 @@ func Attach(c *cron.Cron, cfg Config) error {
 	if cfg.RunOnStartup {
 		go func() {
 			updateServerData()
-			vacuumDatabase()
-			for _, fn := range updateHistoryFuncs {
-				go fn()
-			}
-			for _, fn := range updateStatsFuncs {
-				go fn()
-			}
+			//vacuumDatabase()
+			//for _, fn := range updateHistoryFuncs {
+			//	go fn()
+			//}
+			//for _, fn := range updateStatsFuncs {
+			//	go fn()
+			//}
 		}()
 	}
 

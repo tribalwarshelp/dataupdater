@@ -1,19 +1,23 @@
 package main
 
 import (
+	"context"
+	"github.com/go-redis/redis/v8"
+	"github.com/pkg/errors"
 	"os"
 	"os/signal"
-	"strconv"
-	"strings"
 	"syscall"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/tribalwarshelp/shared/mode"
 
-	_cron "github.com/tribalwarshelp/cron/cron"
+	twhelpcron "github.com/tribalwarshelp/cron/cron"
+	"github.com/tribalwarshelp/cron/cron/queue"
+	"github.com/tribalwarshelp/cron/cron/tasks"
+	"github.com/tribalwarshelp/cron/db"
+	envutils "github.com/tribalwarshelp/cron/utils/env"
 
-	gopglogrusquerylogger "github.com/Kichiyaki/go-pg-logrus-query-logger/v10"
-	"github.com/go-pg/pg/v10"
 	"github.com/joho/godotenv"
 	"github.com/robfig/cron/v3"
 )
@@ -29,38 +33,44 @@ func init() {
 }
 
 func main() {
-	dbOptions := &pg.Options{
-		User:     os.Getenv("DB_USER"),
-		Password: os.Getenv("DB_PASSWORD"),
-		Database: os.Getenv("DB_NAME"),
-		Addr:     os.Getenv("DB_HOST") + ":" + os.Getenv("DB_PORT"),
-		PoolSize: mustParseEnvToInt("DB_POOL_SIZE"),
+	client, err := initializeRedis()
+	if err != nil {
+		logrus.Fatal(errors.Wrap(err, "Error establishing a redis connection"))
 	}
-	dbFields := logrus.Fields{
-		"user":     dbOptions.User,
-		"database": dbOptions.Database,
-		"addr":     dbOptions.Addr,
+	defer client.Close()
+
+	conn, err := db.New(&db.Config{LogQueries: envutils.GetenvBool("LOG_DB_QUERIES")})
+	if err != nil {
+		logrus.Fatal(errors.Wrap(err, "Error establishing a database connection"))
 	}
-	db := pg.Connect(dbOptions)
-	defer func() {
-		if err := db.Close(); err != nil {
-			logrus.WithFields(dbFields).Fatalln(err)
-		}
-	}()
-	if strings.ToUpper(os.Getenv("LOG_DB_QUERIES")) == "TRUE" {
-		db.AddQueryHook(gopglogrusquerylogger.QueryLogger{
-			Entry: logrus.NewEntry(logrus.StandardLogger()),
-		})
+	defer conn.Close()
+	logrus.Info("Connection with the database has been established")
+
+	queue, err := queue.New(&queue.Config{
+		WorkerLimit: envutils.GetenvInt("MAX_CONCURRENT_WORKERS"),
+		Redis:       client,
+	})
+	if err != nil {
+		logrus.Fatal(errors.Wrap(err, "Couldn't create the task queue"))
 	}
-	logrus.WithFields(dbFields).Info("Connection with the database has been established")
+	tasks.RegisterTasks(&tasks.Config{
+		DB:    conn,
+		Queue: queue,
+	})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := queue.Start(ctx); err != nil {
+		logrus.Fatal(err)
+	}
 
 	c := cron.New(cron.WithChain(
 		cron.SkipIfStillRunning(cron.PrintfLogger(logrus.WithField("package", "cron"))),
 	))
-	if err := _cron.Attach(c, _cron.Config{
-		DB:                   db,
-		MaxConcurrentWorkers: mustParseEnvToInt("MAX_CONCURRENT_WORKERS"),
-		RunOnStartup:         os.Getenv("RUN_ON_STARTUP") == "true",
+	if err := twhelpcron.Attach(c, twhelpcron.Config{
+		DB:                   conn,
+		MaxConcurrentWorkers: envutils.GetenvInt("MAX_CONCURRENT_WORKERS"),
+		RunOnStartup:         envutils.GetenvBool("RUN_ON_STARTUP"),
+		Queue:                queue,
 	}); err != nil {
 		logrus.Fatal(err)
 	}
@@ -74,18 +84,9 @@ func main() {
 	<-channel
 
 	logrus.Info("shutting down")
-}
-
-func mustParseEnvToInt(key string) int {
-	str := os.Getenv(key)
-	if str == "" {
-		return 0
+	if err := queue.Close(); err != nil {
+		logrus.Fatal(err)
 	}
-	i, err := strconv.Atoi(str)
-	if err != nil {
-		return 0
-	}
-	return i
 }
 
 func setupLogger() {
@@ -104,4 +105,19 @@ func setupLogger() {
 		customFormatter.FullTimestamp = true
 		logrus.SetFormatter(customFormatter)
 	}
+}
+
+func initializeRedis() (redis.UniversalClient, error) {
+	client := redis.NewClient(&redis.Options{
+		Addr:     envutils.GetenvString("REDIS_ADDR"),
+		Username: envutils.GetenvString("REDIS_USERNAME"),
+		Password: envutils.GetenvString("REDIS_PASSWORD"),
+		DB:       envutils.GetenvInt("REDIS_DB"),
+	})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := client.Ping(ctx).Err(); err != nil {
+		return nil, errors.Wrap(err, "initializeRedis")
+	}
+	return client, nil
 }
