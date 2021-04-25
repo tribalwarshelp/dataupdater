@@ -60,11 +60,11 @@ func Attach(c *cron.Cron, cfg Config) error {
 	}
 	if cfg.RunOnStartup {
 		go func() {
-			//h.updateServerData()
-			//h.vacuumDatabase()
-			//for _, fn := range updateHistoryFuncs {
-			//	go fn()
-			//}
+			h.updateServerData()
+			h.vacuumDatabase()
+			for _, fn := range updateHistoryFuncs {
+				go fn()
+			}
 			for _, fn := range updateStatsFuncs {
 				go fn()
 			}

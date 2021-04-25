@@ -40,61 +40,60 @@ func RegisterTasks(cfg *Config) error {
 		db:    cfg.DB,
 		queue: cfg.Queue,
 	}
-	taskq.RegisterTask(&taskq.TaskOptions{
-		Name:       TaskNameLoadVersionsAndUpdateServerData,
-		RetryLimit: defaultRetryLimit,
-		Handler:    (&taskLoadVersionsAndUpdateServerData{t}).execute,
-	})
-	taskq.RegisterTask(&taskq.TaskOptions{
-		Name:       TaskNameLoadServersAndUpdateData,
-		RetryLimit: defaultRetryLimit,
-		Handler:    (&taskLoadServersAndUpdateData{t}).execute,
-	})
-	taskq.RegisterTask(&taskq.TaskOptions{
-		Name:       TaskNameUpdateServerData,
-		RetryLimit: defaultRetryLimit,
-		Handler:    (&taskUpdateServerData{t}).execute,
-	})
-	taskq.RegisterTask(&taskq.TaskOptions{
-		Name:       TaskNameVacuum,
-		RetryLimit: defaultRetryLimit,
-		Handler:    (&taskVacuum{t}).execute,
-	})
-	taskq.RegisterTask(&taskq.TaskOptions{
-		Name:       TaskNameVacuumServerDB,
-		RetryLimit: defaultRetryLimit,
-		Handler:    (&taskVacuumServerDB{t}).execute,
-	})
-	taskq.RegisterTask(&taskq.TaskOptions{
-		Name:       TaskUpdateEnnoblements,
-		RetryLimit: defaultRetryLimit,
-		Handler:    (&taskUpdateEnnoblements{t}).execute,
-	})
-	taskq.RegisterTask(&taskq.TaskOptions{
-		Name:       TaskUpdateServerEnnoblements,
-		RetryLimit: defaultRetryLimit,
-		Handler:    (&taskUpdateServerEnnoblements{t}).execute,
-	})
-	taskq.RegisterTask(&taskq.TaskOptions{
-		Name:       TaskUpdateHistory,
-		RetryLimit: defaultRetryLimit,
-		Handler:    (&taskUpdateHistory{t}).execute,
-	})
-	taskq.RegisterTask(&taskq.TaskOptions{
-		Name:       TaskUpdateServerHistory,
-		RetryLimit: defaultRetryLimit,
-		Handler:    (&taskUpdateServerHistory{t}).execute,
-	})
-	taskq.RegisterTask(&taskq.TaskOptions{
-		Name:       TaskUpdateStats,
-		RetryLimit: defaultRetryLimit,
-		Handler:    (&taskUpdateStats{t}).execute,
-	})
-	taskq.RegisterTask(&taskq.TaskOptions{
-		Name:       TaskUpdateServerStats,
-		RetryLimit: defaultRetryLimit,
-		Handler:    (&taskUpdateServerStats{t}).execute,
-	})
+	options := []*taskq.TaskOptions{
+		{
+			Name:    TaskNameLoadVersionsAndUpdateServerData,
+			Handler: (&taskLoadVersionsAndUpdateServerData{t}).execute,
+		},
+		{
+			Name:    TaskNameLoadServersAndUpdateData,
+			Handler: (&taskLoadServersAndUpdateData{t}).execute,
+		},
+		{
+			Name:    TaskNameUpdateServerData,
+			Handler: (&taskUpdateServerData{t}).execute,
+		},
+		{
+			Name:    TaskNameVacuum,
+			Handler: (&taskVacuum{t}).execute,
+		},
+		{
+			Name:    TaskNameVacuumServerDB,
+			Handler: (&taskVacuumServerDB{t}).execute,
+		},
+		{
+			Name:    TaskUpdateEnnoblements,
+			Handler: (&taskUpdateEnnoblements{t}).execute,
+		},
+		{
+			Name:    TaskUpdateServerEnnoblements,
+			Handler: (&taskUpdateServerEnnoblements{t}).execute,
+		},
+		{
+			Name:    TaskUpdateHistory,
+			Handler: (&taskUpdateHistory{t}).execute,
+		},
+		{
+			Name:       TaskUpdateServerHistory,
+			RetryLimit: defaultRetryLimit,
+			Handler:    (&taskUpdateServerHistory{t}).execute,
+		},
+		{
+			Name:    TaskUpdateStats,
+			Handler: (&taskUpdateStats{t}).execute,
+		},
+		{
+			Name:    TaskUpdateServerStats,
+			Handler: (&taskUpdateServerStats{t}).execute,
+		},
+	}
+	for _, taskOptions := range options {
+		opts := taskOptions
+		if opts.RetryLimit == 0 {
+			opts.RetryLimit = defaultRetryLimit
+		}
+		taskq.RegisterTask(opts)
+	}
 
 	return nil
 }
