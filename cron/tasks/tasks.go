@@ -10,10 +10,10 @@ import (
 )
 
 const (
-	TaskNameLoadVersions     = "loadVersions"
-	TaskNameLoadServers      = "loadServers"
-	TaskNameUpdateServerData = "updateServerData"
-	defaultRetryLimit        = 3
+	TaskNameLoadVersionsAndUpdateServerData = "loadVersions"
+	TaskNameLoadServersAndUpdateData        = "loadServers"
+	TaskNameUpdateServerData                = "updateServerData"
+	defaultRetryLimit                       = 3
 )
 
 var log = logrus.WithField("package", "tasks")
@@ -33,14 +33,14 @@ func RegisterTasks(cfg *Config) error {
 		queue: cfg.Queue,
 	}
 	taskq.RegisterTask(&taskq.TaskOptions{
-		Name:       TaskNameLoadVersions,
+		Name:       TaskNameLoadVersionsAndUpdateServerData,
 		RetryLimit: defaultRetryLimit,
-		Handler:    (&taskLoadVersions{t}).execute,
+		Handler:    (&taskLoadVersionsAndUpdateServerData{t}).execute,
 	})
 	taskq.RegisterTask(&taskq.TaskOptions{
-		Name:       TaskNameLoadServers,
+		Name:       TaskNameLoadServersAndUpdateData,
 		RetryLimit: defaultRetryLimit,
-		Handler:    (&taskLoadServers{t}).execute,
+		Handler:    (&taskLoadServersAndUpdateData{t}).execute,
 	})
 
 	return nil

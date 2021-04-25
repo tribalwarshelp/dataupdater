@@ -17,11 +17,11 @@ const (
 	endpointGetServers = "/backend/get_servers.php"
 )
 
-type taskLoadServers struct {
+type taskLoadServersAndUpdateData struct {
 	*task
 }
 
-func (t *taskLoadServers) execute(version *models.Version) error {
+func (t *taskLoadServersAndUpdateData) execute(version *models.Version) error {
 	if err := t.validatePayload(version); err != nil {
 		return nil
 	}
@@ -79,27 +79,27 @@ func (t *taskLoadServers) execute(version *models.Version) error {
 	return nil
 }
 
-func (t *taskLoadServers) validatePayload(version *models.Version) error {
+func (t *taskLoadServersAndUpdateData) validatePayload(version *models.Version) error {
 	if version == nil {
-		return errors.Errorf("taskLoadServers.validatePayload: Expected *models.Version, got nil")
+		return errors.Errorf("taskLoadServersAndUpdateData.validatePayload: Expected *models.Version, got nil")
 	}
 	return nil
 }
 
-func (t *taskLoadServers) getServers(version *models.Version) (map[string]string, error) {
+func (t *taskLoadServersAndUpdateData) getServers(version *models.Version) (map[string]string, error) {
 	resp, err := http.Get(fmt.Sprintf("https://%s%s", version.Host, endpointGetServers))
 	if err != nil {
-		return nil, errors.Wrapf(err, "%s: taskLoadServers.loadServers couldn't load servers", version.Host)
+		return nil, errors.Wrapf(err, "%s: taskLoadServersAndUpdateData.loadServers couldn't load servers", version.Host)
 	}
 	defer resp.Body.Close()
 
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, errors.Wrapf(err, "%s: taskLoadServers.loadServers couldn't read the body", version.Host)
+		return nil, errors.Wrapf(err, "%s: taskLoadServersAndUpdateData.loadServers couldn't read the body", version.Host)
 	}
 	body, err := phpserialize.Decode(string(bodyBytes))
 	if err != nil {
-		return nil, errors.Wrapf(err, "%s: taskLoadServers.loadServers couldn't decode the body into the go value", version.Host)
+		return nil, errors.Wrapf(err, "%s: taskLoadServersAndUpdateData.loadServers couldn't decode the body into the go value", version.Host)
 	}
 
 	result := make(map[string]string)

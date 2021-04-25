@@ -37,7 +37,7 @@ func (h *handler) init() error {
 }
 
 func (h *handler) updateServerData() {
-	h.queue.Add(queue.MainQueue, tasks.Get(tasks.TaskNameLoadVersions).WithArgs(context.Background()))
+	h.queue.Add(queue.MainQueue, tasks.Get(tasks.TaskNameLoadVersionsAndUpdateServerData).WithArgs(context.Background()))
 }
 
 func (h *handler) updateServerEnnoblements() {
