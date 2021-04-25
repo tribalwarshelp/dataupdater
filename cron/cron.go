@@ -62,14 +62,20 @@ func Attach(c *cron.Cron, cfg Config) error {
 		go func() {
 			//h.updateServerData()
 			//h.vacuumDatabase()
-			for _, fn := range updateHistoryFuncs {
-				go fn()
-			}
-			//for _, fn := range updateStatsFuncs {
+			//for _, fn := range updateHistoryFuncs {
 			//	go fn()
 			//}
+			for _, fn := range updateStatsFuncs {
+				go fn()
+			}
 		}()
 	}
 
 	return nil
+}
+
+func createFnWithTimezone(timezone string, fn func(timezone string)) func() {
+	return func() {
+		fn(timezone)
+	}
 }

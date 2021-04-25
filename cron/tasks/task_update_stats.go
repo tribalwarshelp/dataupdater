@@ -14,10 +14,11 @@ type taskUpdateStats struct {
 }
 
 func (t *taskUpdateStats) execute(timezone string) error {
+	entry := log.WithField("timezone", timezone)
 	location, err := t.loadLocation(timezone)
 	if err != nil {
 		err = errors.Wrap(err, "taskUpdateStats.execute")
-		log.Error(err)
+		entry.Error(err)
 		return err
 	}
 	year, month, day := time.Now().In(location).Date()
@@ -35,10 +36,10 @@ func (t *taskUpdateStats) execute(timezone string) error {
 		Select()
 	if err != nil {
 		err = errors.Wrap(err, "taskUpdateStats.execute")
-		log.Errorln(err)
+		entry.Errorln(err)
 		return err
 	}
-	log.
+	entry.
 		WithField("numberOfServers", len(servers)).
 		Info("Update of the stats has started")
 	for _, server := range servers {
