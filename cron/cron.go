@@ -30,7 +30,11 @@ func Attach(c *cron.Cron, cfg Config) error {
 		return fmt.Errorf("cfg.Queue cannot be nil, expected queue.Queue")
 	}
 
-	h := &handler{db: cfg.DB, maxConcurrentWorkers: cfg.MaxConcurrentWorkers}
+	h := &handler{
+		db:                   cfg.DB,
+		maxConcurrentWorkers: cfg.MaxConcurrentWorkers,
+		queue:                cfg.Queue,
+	}
 	if err := h.init(); err != nil {
 		return err
 	}

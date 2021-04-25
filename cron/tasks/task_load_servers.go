@@ -68,7 +68,7 @@ func (t *taskLoadServers) execute(version *models.Version) error {
 
 	if _, err := t.db.Model(&models.Server{}).
 		Set("status = ?", models.ServerStatusClosed).
-		Where("key NOT IN (?) AND version_code =", pg.In(serverKeys), version.Code).
+		Where("key NOT IN (?) AND version_code = ?", pg.In(serverKeys), version.Code).
 		Update(); err != nil {
 		err = errors.Wrap(err, "couldn't update server statuses")
 		logrus.Fatal(err)
@@ -92,6 +92,7 @@ func (t *taskLoadServers) getServers(version *models.Version) (map[string]string
 		return nil, errors.Wrapf(err, "%s: taskLoadServers.loadServers couldn't load servers", version.Host)
 	}
 	defer resp.Body.Close()
+
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, errors.Wrapf(err, "%s: taskLoadServers.loadServers couldn't read the body", version.Host)
@@ -100,5 +101,14 @@ func (t *taskLoadServers) getServers(version *models.Version) (map[string]string
 	if err != nil {
 		return nil, errors.Wrapf(err, "%s: taskLoadServers.loadServers couldn't decode the body into the go value", version.Host)
 	}
-	return body.(map[string]string), nil
+
+	result := make(map[string]string)
+	for serverKey, url := range body.(map[interface{}]interface{}) {
+		serverKeyStr := serverKey.(string)
+		urlStr := url.(string)
+		if serverKeyStr != "" && urlStr != "" {
+			result[serverKeyStr] = urlStr
+		}
+	}
+	return result, nil
 }

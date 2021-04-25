@@ -57,9 +57,7 @@ func main() {
 		DB:    conn,
 		Queue: queue,
 	})
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if err := queue.Start(ctx); err != nil {
+	if err := queue.Start(context.Background()); err != nil {
 		logrus.Fatal(err)
 	}
 
