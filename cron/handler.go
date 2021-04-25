@@ -329,11 +329,16 @@ func (h *handler) updateServerEnnoblements() {
 func (h *handler) updateHistory(location *time.Location) {
 	servers := []*models.Server{}
 	log := log.WithField("timezone", location.String())
+	year, month, day := time.Now().In(location).Date()
+	t := time.Date(year, month, day, 1, 30, 0, 0, location)
 	err := h.db.
 		Model(&servers).
-		Where("status = ? AND (history_updated_at IS NULL OR now() - history_updated_at > '23 hours') AND timezone = ?",
+		Where(
+			"status = ? AND (history_updated_at IS NULL OR history_updated_at < ?) AND timezone = ?",
 			models.ServerStatusOpen,
-			location.String()).
+			t,
+			location.String(),
+		).
 		Relation("Version").
 		Select()
 	if err != nil {
@@ -375,11 +380,16 @@ func (h *handler) updateHistory(location *time.Location) {
 func (h *handler) updateStats(location *time.Location) {
 	servers := []*models.Server{}
 	log := log.WithField("timezone", location.String())
+	year, month, day := time.Now().In(location).Date()
+	t := time.Date(year, month, day, 1, 45, 0, 0, location)
 	err := h.db.
 		Model(&servers).
-		Where("status = ? AND (stats_updated_at IS NULL OR now() - stats_updated_at > '23 hours') AND timezone = ?",
+		Where(
+			"status = ? AND (stats_updated_at IS NULL OR stats_updated_at < ?) AND timezone = ?",
 			models.ServerStatusOpen,
-			location.String()).
+			t,
+			location.String(),
+		).
 		Relation("Version").
 		Select()
 	if err != nil {

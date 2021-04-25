@@ -12,7 +12,7 @@ import (
 
 	_cron "github.com/tribalwarshelp/cron/cron"
 
-	"github.com/go-pg/pg/extra/pgdebug"
+	gopglogrusquerylogger "github.com/Kichiyaki/go-pg-logrus-query-logger/v10"
 	"github.com/go-pg/pg/v10"
 	"github.com/joho/godotenv"
 	"github.com/robfig/cron/v3"
@@ -22,13 +22,10 @@ func init() {
 	os.Setenv("TZ", "UTC")
 
 	if mode.Get() == mode.DevelopmentMode {
-		godotenv.Load(".env.development")
+		godotenv.Load(".env.local")
 	}
 
-	customFormatter := new(logrus.TextFormatter)
-	customFormatter.TimestampFormat = "2006-01-02 15:04:05"
-	customFormatter.FullTimestamp = true
-	logrus.SetFormatter(customFormatter)
+	setupLogger()
 }
 
 func main() {
@@ -51,11 +48,11 @@ func main() {
 		}
 	}()
 	if strings.ToUpper(os.Getenv("LOG_DB_QUERIES")) == "TRUE" {
-		db.AddQueryHook(pgdebug.DebugHook{
-			Verbose: true,
+		db.AddQueryHook(gopglogrusquerylogger.QueryLogger{
+			Entry: logrus.NewEntry(logrus.StandardLogger()),
 		})
 	}
-	logrus.WithFields(dbFields).Info("Connected to the database")
+	logrus.WithFields(dbFields).Info("Connection with the database has been established")
 
 	c := cron.New(cron.WithChain(
 		cron.SkipIfStillRunning(cron.PrintfLogger(logrus.WithField("package", "cron"))),
@@ -89,4 +86,22 @@ func mustParseEnvToInt(key string) int {
 		return 0
 	}
 	return i
+}
+
+func setupLogger() {
+	if mode.Get() == mode.DevelopmentMode {
+		logrus.SetLevel(logrus.DebugLevel)
+	}
+
+	timestampFormat := "2006-01-02 15:04:05"
+	if mode.Get() == mode.ProductionMode {
+		customFormatter := new(logrus.JSONFormatter)
+		customFormatter.TimestampFormat = timestampFormat
+		logrus.SetFormatter(customFormatter)
+	} else {
+		customFormatter := new(logrus.TextFormatter)
+		customFormatter.TimestampFormat = timestampFormat
+		customFormatter.FullTimestamp = true
+		logrus.SetFormatter(customFormatter)
+	}
 }
