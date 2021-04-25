@@ -81,6 +81,11 @@ func RegisterTasks(cfg *Config) error {
 		Handler:    (&taskUpdateHistory{t}).execute,
 	})
 	taskq.RegisterTask(&taskq.TaskOptions{
+		Name:       TaskUpdateServerHistory,
+		RetryLimit: defaultRetryLimit,
+		Handler:    (&taskUpdateServerHistory{t}).execute,
+	})
+	taskq.RegisterTask(&taskq.TaskOptions{
 		Name:       TaskUpdateStats,
 		RetryLimit: defaultRetryLimit,
 		Handler:    (&taskUpdateStats{t}).execute,

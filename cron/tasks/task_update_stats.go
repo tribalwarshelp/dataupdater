@@ -43,7 +43,7 @@ func (t *taskUpdateStats) execute(timezone string) error {
 		Info("Update of the stats has started")
 	for _, server := range servers {
 		s := server
-		t.queue.Add(queue.MainQueue, Get(TaskUpdateServerStats).WithArgs(context.Background(), s))
+		t.queue.Add(queue.MainQueue, Get(TaskUpdateServerStats).WithArgs(context.Background(), timezone, s))
 	}
 	return nil
 }

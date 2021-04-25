@@ -1,28 +1,67 @@
-package cron
+package tasks
 
 import (
-	"time"
-
 	"github.com/go-pg/pg/v10"
 	"github.com/pkg/errors"
 	"github.com/tribalwarshelp/shared/models"
+	"time"
 )
 
-type updateServerHistoryWorker struct {
+type taskUpdateServerHistory struct {
+	*task
+}
+
+func (t *taskUpdateServerHistory) execute(timezone string, server *models.Server) error {
+	if err := t.validatePayload(server); err != nil {
+		log.Debug(err)
+		return nil
+	}
+	location, err := t.loadLocation(timezone)
+	if err != nil {
+		err = errors.Wrap(err, "taskUpdateServerHistory.execute")
+		log.Error(err)
+		return err
+	}
+	entry := log.WithField("key", server.Key)
+	entry.Infof("%s: update of the history has started...", server.Key)
+	err = (&workerUpdateServerHistory{
+		db:       t.db.WithParam("SERVER", pg.Safe(server.Key)),
+		server:   server,
+		location: location,
+	}).update()
+	if err != nil {
+		err = errors.Wrap(err, "taskUpdateServerHistory.execute")
+		entry.Error(err)
+		return err
+	}
+	entry.Infof("%s: history has been updated", server.Key)
+
+	return nil
+}
+
+func (t *taskUpdateServerHistory) validatePayload(server *models.Server) error {
+	if server == nil {
+		return errors.Errorf("taskUpdateServerHistory.validatePayload: Expected *models.Server, got nil")
+	}
+
+	return nil
+}
+
+type workerUpdateServerHistory struct {
 	db       *pg.DB
 	server   *models.Server
 	location *time.Location
 }
 
-func (w *updateServerHistoryWorker) update() error {
-	players := []*models.Player{}
+func (w *workerUpdateServerHistory) update() error {
+	var players []*models.Player
 	if err := w.db.Model(&players).Where("exists = true").Select(); err != nil {
-		return errors.Wrap(err, "cannot load players")
+		return errors.Wrap(err, "couldn't load players")
 	}
 
 	now := time.Now().In(w.location)
 	createDate := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
-	ph := []*models.PlayerHistory{}
+	var ph []*models.PlayerHistory
 	for _, player := range players {
 		ph = append(ph, &models.PlayerHistory{
 			OpponentsDefeated: player.OpponentsDefeated,
@@ -35,11 +74,11 @@ func (w *updateServerHistoryWorker) update() error {
 		})
 	}
 
-	tribes := []*models.Tribe{}
+	var tribes []*models.Tribe
 	if err := w.db.Model(&tribes).Where("exists = true").Select(); err != nil {
-		return errors.Wrap(err, "cannot load tribes")
+		return errors.Wrap(err, "couldn't load tribes")
 	}
-	th := []*models.TribeHistory{}
+	var th []*models.TribeHistory
 	for _, tribe := range tribes {
 		th = append(th, &models.TribeHistory{
 			OpponentsDefeated: tribe.OpponentsDefeated,
@@ -62,13 +101,13 @@ func (w *updateServerHistoryWorker) update() error {
 
 	if len(ph) > 0 {
 		if _, err := w.db.Model(&ph).Insert(); err != nil {
-			return errors.Wrap(err, "cannot insert players history")
+			return errors.Wrap(err, "couldn't insert players history")
 		}
 	}
 
 	if len(th) > 0 {
 		if _, err := w.db.Model(&th).Insert(); err != nil {
-			return errors.Wrap(err, "cannot insert tribes history")
+			return errors.Wrap(err, "couldn't insert tribes history")
 		}
 	}
 
@@ -77,7 +116,7 @@ func (w *updateServerHistoryWorker) update() error {
 		WherePK().
 		Returning("*").
 		Update(); err != nil {
-		return errors.Wrap(err, "cannot update server")
+		return errors.Wrap(err, "couldn't update server")
 
 	}
 

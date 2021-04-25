@@ -37,7 +37,7 @@ func (t *taskUpdateServerEnnoblements) execute(url string, server *models.Server
 
 func (t *taskUpdateServerEnnoblements) validatePayload(server *models.Server) error {
 	if server == nil {
-		return errors.Errorf("taskVacuumServerDB.validatePayload: Expected *models.Server, got nil")
+		return errors.Errorf("taskUpdateServerEnnoblements.validatePayload: Expected *models.Server, got nil")
 	}
 
 	return nil

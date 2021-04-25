@@ -14,10 +14,11 @@ type taskUpdateHistory struct {
 }
 
 func (t *taskUpdateHistory) execute(timezone string) error {
+	entry := log.WithField("timezone", timezone)
 	location, err := t.loadLocation(timezone)
 	if err != nil {
 		err = errors.Wrap(err, "taskUpdateHistory.execute")
-		log.Error(err)
+		entry.Error(err)
 		return err
 	}
 	year, month, day := time.Now().In(location).Date()
@@ -35,15 +36,15 @@ func (t *taskUpdateHistory) execute(timezone string) error {
 		Select()
 	if err != nil {
 		err = errors.Wrap(err, "taskUpdateHistory.execute")
-		log.Errorln(err)
+		entry.Errorln(err)
 		return err
 	}
-	log.
+	entry.
 		WithField("numberOfServers", len(servers)).
 		Info("Update of the history has started")
 	for _, server := range servers {
 		s := server
-		t.queue.Add(queue.MainQueue, Get(TaskUpdateServerHistory).WithArgs(context.Background(), s))
+		t.queue.Add(queue.MainQueue, Get(TaskUpdateServerHistory).WithArgs(context.Background(), timezone, s))
 	}
 	return nil
 }

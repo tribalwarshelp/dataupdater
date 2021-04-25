@@ -65,10 +65,9 @@ func main() {
 		cron.SkipIfStillRunning(cron.PrintfLogger(logrus.WithField("package", "cron"))),
 	))
 	if err := twhelpcron.Attach(c, twhelpcron.Config{
-		DB:                   conn,
-		MaxConcurrentWorkers: envutils.GetenvInt("MAX_CONCURRENT_WORKERS"),
-		RunOnStartup:         envutils.GetenvBool("RUN_ON_STARTUP"),
-		Queue:                queue,
+		DB:           conn,
+		RunOnStartup: envutils.GetenvBool("RUN_ON_STARTUP"),
+		Queue:        queue,
 	}); err != nil {
 		logrus.Fatal(err)
 	}
