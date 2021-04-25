@@ -2,30 +2,13 @@ package cron
 
 import (
 	"context"
-	"github.com/go-pg/pg/v10"
-	"runtime"
 
 	"github.com/tribalwarshelp/cron/cron/queue"
 	"github.com/tribalwarshelp/cron/cron/tasks"
 )
 
 type handler struct {
-	db                   *pg.DB
-	maxConcurrentWorkers int
-	pool                 *pool
-	queue                queue.Queue
-}
-
-func (h *handler) init() error {
-	if h.maxConcurrentWorkers <= 0 {
-		h.maxConcurrentWorkers = runtime.NumCPU()
-	}
-
-	if h.pool == nil {
-		h.pool = newPool(h.maxConcurrentWorkers)
-	}
-
-	return nil
+	queue queue.Queue
 }
 
 func (h *handler) updateServerData() {

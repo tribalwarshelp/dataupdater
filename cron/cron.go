@@ -5,19 +5,15 @@ import (
 
 	"github.com/go-pg/pg/v10"
 	"github.com/robfig/cron/v3"
-	"github.com/sirupsen/logrus"
 	"github.com/tribalwarshelp/shared/models"
 
 	"github.com/tribalwarshelp/cron/cron/queue"
 )
 
-var log = logrus.WithField("package", "cron")
-
 type Config struct {
-	DB                   *pg.DB
-	MaxConcurrentWorkers int
-	RunOnStartup         bool
-	Queue                queue.Queue
+	DB           *pg.DB
+	RunOnStartup bool
+	Queue        queue.Queue
 }
 
 func Attach(c *cron.Cron, cfg Config) error {
@@ -29,12 +25,7 @@ func Attach(c *cron.Cron, cfg Config) error {
 	}
 
 	h := &handler{
-		db:                   cfg.DB,
-		maxConcurrentWorkers: cfg.MaxConcurrentWorkers,
-		queue:                cfg.Queue,
-	}
-	if err := h.init(); err != nil {
-		return err
+		queue: cfg.Queue,
 	}
 
 	var versions []*models.Version
