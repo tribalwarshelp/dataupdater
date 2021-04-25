@@ -35,13 +35,13 @@ func init() {
 func main() {
 	client, err := initializeRedis()
 	if err != nil {
-		logrus.Fatal(errors.Wrap(err, "Error establishing a redis connection"))
+		logrus.Fatal(errors.Wrap(err, "Couldn't connect to Redis"))
 	}
 	defer client.Close()
 
 	conn, err := db.New(&db.Config{LogQueries: envutils.GetenvBool("LOG_DB_QUERIES")})
 	if err != nil {
-		logrus.Fatal(errors.Wrap(err, "Error establishing a database connection"))
+		logrus.Fatal(errors.Wrap(err, "Couldn't connect to the db"))
 	}
 	defer conn.Close()
 	logrus.Info("Connection with the database has been established")
