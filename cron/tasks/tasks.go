@@ -13,6 +13,8 @@ const (
 	TaskNameLoadVersionsAndUpdateServerData = "loadVersions"
 	TaskNameLoadServersAndUpdateData        = "loadServers"
 	TaskNameUpdateServerData                = "updateServerData"
+	TaskNameVacuum                          = "vacuum"
+	TaskNameVacuumServerDB                  = "vacuumServerDB"
 	defaultRetryLimit                       = 3
 )
 
@@ -46,6 +48,11 @@ func RegisterTasks(cfg *Config) error {
 		Name:       TaskNameUpdateServerData,
 		RetryLimit: defaultRetryLimit,
 		Handler:    (&taskUpdateServerData{t}).execute,
+	})
+	taskq.RegisterTask(&taskq.TaskOptions{
+		Name:       TaskNameVacuum,
+		RetryLimit: defaultRetryLimit,
+		Handler:    (&taskVacuum{t}).execute,
 	})
 
 	return nil
