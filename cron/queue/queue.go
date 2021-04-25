@@ -17,11 +17,6 @@ const (
 	EnnoblementsQueue QueueName = "ennoblements"
 )
 
-type Config struct {
-	Redis       redis.UniversalClient
-	WorkerLimit int
-}
-
 type Queue interface {
 	Start(ctx context.Context) error
 	Close() error
@@ -69,6 +64,16 @@ func (q *queue) registerQueue(name QueueName, limit int) taskq.Queue {
 	})
 }
 
+func (q *queue) getQueueByName(name QueueName) taskq.Queue {
+	switch name {
+	case MainQueue:
+		return q.mainQueue
+	case EnnoblementsQueue:
+		return q.ennoblementsQueue
+	}
+	return nil
+}
+
 func (q *queue) Start(ctx context.Context) error {
 	if err := q.factory.StartConsumers(ctx); err != nil {
 		return errors.Wrap(err, "Couldn't start the queue")
@@ -90,26 +95,6 @@ func (q *queue) Add(name QueueName, msg *taskq.Message) error {
 	}
 	if err := queue.Add(msg); err != nil {
 		return errors.Wrap(err, "Couldn't add the message to the queue")
-	}
-	return nil
-}
-
-func (q *queue) getQueueByName(name QueueName) taskq.Queue {
-	switch name {
-	case MainQueue:
-		return q.mainQueue
-	case EnnoblementsQueue:
-		return q.ennoblementsQueue
-	}
-	return nil
-}
-
-func validateConfig(cfg *Config) error {
-	if cfg == nil {
-		return errors.New("Config hasn't been provided")
-	}
-	if cfg.Redis == nil {
-		return errors.New("cfg.Redis is a required field")
 	}
 	return nil
 }

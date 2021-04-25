@@ -19,11 +19,8 @@ func (t *taskUpdateServerEnnoblements) execute(url string, server *models.Server
 	entry := log.WithField("key", server.Key)
 	entry.Debugf("%s: update of the ennoblements has started...", server.Key)
 	err := (&workerUpdateServerEnnoblements{
-		db: t.db.WithParam("SERVER", pg.Safe(server.Key)),
-		dataloader: dataloader.New(&dataloader.Config{
-			BaseURL: url,
-			Client:  newHTTPClient(),
-		}),
+		db:         t.db.WithParam("SERVER", pg.Safe(server.Key)),
+		dataloader: newDataloader(url),
 	}).update()
 	if err != nil {
 		err = errors.Wrap(err, "taskUpdateServerEnnoblements.execute")

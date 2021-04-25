@@ -1,6 +1,7 @@
 package tasks
 
 import (
+	"github.com/tribalwarshelp/shared/tw/dataloader"
 	"net/http"
 	"time"
 
@@ -33,6 +34,13 @@ func newHTTPClient() *http.Client {
 	return &http.Client{
 		Timeout: 10 * time.Second,
 	}
+}
+
+func newDataloader(url string) dataloader.DataLoader {
+	return dataloader.New(&dataloader.Config{
+		BaseURL: url,
+		Client:  newHTTPClient(),
+	})
 }
 
 type tribesSearchableByID struct {

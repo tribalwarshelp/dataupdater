@@ -47,7 +47,7 @@ func main() {
 	logrus.Info("Connection with the database has been established")
 
 	queue, err := queue.New(&queue.Config{
-		WorkerLimit: envutils.GetenvInt("MAX_CONCURRENT_WORKERS"),
+		WorkerLimit: envutils.GetenvInt("WORKER_LIMIT"),
 		Redis:       client,
 	})
 	if err != nil {

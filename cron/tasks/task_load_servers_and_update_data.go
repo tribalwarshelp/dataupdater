@@ -103,11 +103,11 @@ func (t *taskLoadServersAndUpdateData) getServers(version *models.Version) (map[
 
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, errors.Wrapf(err, "%s: taskLoadServersAndUpdateData.loadServers couldn't read the body", version.Host)
+		return nil, errors.Wrapf(err, "%s: taskLoadServersAndUpdateData.loadServers couldn't read the response body", version.Host)
 	}
 	body, err := phpserialize.Decode(string(bodyBytes))
 	if err != nil {
-		return nil, errors.Wrapf(err, "%s: taskLoadServersAndUpdateData.loadServers couldn't decode the body into the go value", version.Host)
+		return nil, errors.Wrapf(err, "%s: taskLoadServersAndUpdateData.loadServers couldn't decode the response body into the go value", version.Host)
 	}
 
 	result := make(map[string]string)

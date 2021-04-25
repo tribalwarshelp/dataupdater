@@ -22,12 +22,9 @@ func (t *taskUpdateServerData) execute(url string, server *models.Server) error 
 	entry := log.WithField("key", server.Key)
 	entry.Infof("%s: updating data...", server.Key)
 	err := (&workerUpdateServerData{
-		db: t.db.WithParam("SERVER", pg.Safe(server.Key)),
-		dataloader: dataloader.New(&dataloader.Config{
-			BaseURL: url,
-			Client:  newHTTPClient(),
-		}),
-		server: server,
+		db:         t.db.WithParam("SERVER", pg.Safe(server.Key)),
+		dataloader: newDataloader(url),
+		server:     server,
 	}).update()
 	if err != nil {
 		err = errors.Wrap(err, "taskUpdateServerData.execute")

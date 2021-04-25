@@ -1,4 +1,4 @@
-# tribalwarshelp.com cron
+# TWHelp cron
 
 Features:
 
@@ -18,7 +18,15 @@ DB_PORT=5432
 DB_HOST=your_db_host
 DB_PASSWORD=your_db_pass
 
-MAX_CONCURRENT_WORKERS=1 #how many servers should update at the same time
+REDIS_ADDR=redis_addr
+REDIS_DB=redis_db
+REDIS_USER=redis_user
+REDIS_PASSWORD=redis_password
+
+RUN_ON_STARTUP=true|false
+LOG_DB_QUERIES=true|false
+
+WORKER_LIMIT=1 #how many servers should update at the same time
 ```
 
 ### Prerequisites
