@@ -16,7 +16,7 @@ const (
 	TaskNameVacuum                          = "vacuum"
 	TaskNameVacuumServerDB                  = "vacuumServerDB"
 	TaskUpdateEnnoblements                  = "updateEnnoblements"
-	TaskServerUpdateEnnoblements            = "serverUpdateEnnoblements"
+	TaskUpdateServerEnnoblements            = "updateServerEnnoblements"
 	defaultRetryLimit                       = 3
 )
 
@@ -65,6 +65,11 @@ func RegisterTasks(cfg *Config) error {
 		Name:       TaskUpdateEnnoblements,
 		RetryLimit: defaultRetryLimit,
 		Handler:    (&taskUpdateEnnoblements{t}).execute,
+	})
+	taskq.RegisterTask(&taskq.TaskOptions{
+		Name:       TaskUpdateServerEnnoblements,
+		RetryLimit: defaultRetryLimit,
+		Handler:    (&taskUpdateServerEnnoblements{t}).execute,
 	})
 
 	return nil

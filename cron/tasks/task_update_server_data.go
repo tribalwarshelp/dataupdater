@@ -6,7 +6,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/tribalwarshelp/shared/models"
 	"github.com/tribalwarshelp/shared/tw/dataloader"
-	"net/http"
 	"time"
 )
 
@@ -26,9 +25,7 @@ func (t *taskUpdateServerData) execute(url string, server *models.Server) error 
 		db: t.db.WithParam("SERVER", pg.Safe(server.Key)),
 		dataloader: dataloader.New(&dataloader.Config{
 			BaseURL: url,
-			Client: &http.Client{
-				Timeout: 10 * time.Second,
-			},
+			Client:  newHTTPClient(),
 		}),
 		server: server,
 	}).update()

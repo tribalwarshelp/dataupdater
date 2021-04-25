@@ -25,12 +25,12 @@ func (t *taskUpdateEnnoblements) execute() error {
 		log.Errorln(err)
 		return err
 	}
-	log.Debug("Updating ennoblements...")
+	log.WithField("numberOfServers", len(servers)).Info("Update of the ennoblements has started...")
 	for _, server := range servers {
 		s := server
 		t.queue.Add(
 			queue.MainQueue,
-			Get(TaskNameVacuumServerDB).
+			Get(TaskUpdateServerEnnoblements).
 				WithArgs(context.Background(), fmt.Sprintf("https://%s.%s", server.Key, server.Version.Host), s),
 		)
 	}

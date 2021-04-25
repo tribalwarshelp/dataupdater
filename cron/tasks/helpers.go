@@ -1,6 +1,7 @@
 package tasks
 
 import (
+	"net/http"
 	"time"
 
 	"github.com/tribalwarshelp/shared/models"
@@ -26,6 +27,12 @@ func calcPlayerDailyGrowth(diffInDays, points int) int {
 		return points / diffInDays
 	}
 	return 0
+}
+
+func newHTTPClient() *http.Client {
+	return &http.Client{
+		Timeout: 10 * time.Second,
+	}
 }
 
 type tribesSearchableByID struct {

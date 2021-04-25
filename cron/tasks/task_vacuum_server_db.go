@@ -22,7 +22,7 @@ func (t *taskVacuumServerDB) execute(server *models.Server) error {
 	}
 	entry := log.WithField("key", server.Key)
 	entry.Infof("%s: vacumming the database...", server.Key)
-	err := (&vacuumServerDBWorker{
+	err := (&workerVacuumServerDB{
 		db: t.db.WithParam("SERVER", pg.Safe(server.Key)),
 	}).vacuum()
 	if err != nil {
@@ -43,11 +43,11 @@ func (t *taskVacuumServerDB) validatePayload(server *models.Server) error {
 	return nil
 }
 
-type vacuumServerDBWorker struct {
+type workerVacuumServerDB struct {
 	db *pg.DB
 }
 
-func (w *vacuumServerDBWorker) vacuum() error {
+func (w *workerVacuumServerDB) vacuum() error {
 	tx, err := w.db.Begin()
 	if err != nil {
 		return err
