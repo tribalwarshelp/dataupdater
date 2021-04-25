@@ -1,6 +1,7 @@
 package tasks
 
 import (
+	"context"
 	"fmt"
 	phpserialize "github.com/Kichiyaki/go-php-serialize"
 	"github.com/go-pg/pg/v10"
@@ -10,6 +11,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/tribalwarshelp/cron/cron/queue"
 	"github.com/tribalwarshelp/cron/db"
 )
 
@@ -23,6 +25,7 @@ type taskLoadServersAndUpdateData struct {
 
 func (t *taskLoadServersAndUpdateData) execute(version *models.Version) error {
 	if err := t.validatePayload(version); err != nil {
+		log.Debug(err)
 		return nil
 	}
 	entry := log.WithField("host", version.Host)
@@ -60,7 +63,7 @@ func (t *taskLoadServersAndUpdateData) execute(version *models.Version) error {
 			Set("version_code = EXCLUDED.version_code").
 			Returning("*").
 			Insert(); err != nil {
-			err = errors.Wrap(err, "couldn't insert/update servers")
+			err = errors.Wrap(err, "taskLoadServersAndUpdateData.execute: couldn't insert/update servers")
 			logrus.Fatal(err)
 			return err
 		}
@@ -70,9 +73,14 @@ func (t *taskLoadServersAndUpdateData) execute(version *models.Version) error {
 		Set("status = ?", models.ServerStatusClosed).
 		Where("key NOT IN (?) AND version_code = ?", pg.In(serverKeys), version.Code).
 		Update(); err != nil {
-		err = errors.Wrap(err, "couldn't update server statuses")
+		err = errors.Wrap(err, "taskLoadServersAndUpdateData.execute: couldn't update server statuses")
 		logrus.Fatal(err)
 		return err
+	}
+
+	for _, server := range servers {
+		s := server
+		t.queue.Add(queue.MainQueue, Get(TaskNameUpdateServerData).WithArgs(context.Background(), data[s.Key], s))
 	}
 
 	entry.Infof("%s: Servers have been loaded", version.Host)

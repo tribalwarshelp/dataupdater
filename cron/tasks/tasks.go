@@ -42,6 +42,11 @@ func RegisterTasks(cfg *Config) error {
 		RetryLimit: defaultRetryLimit,
 		Handler:    (&taskLoadServersAndUpdateData{t}).execute,
 	})
+	taskq.RegisterTask(&taskq.TaskOptions{
+		Name:       TaskNameUpdateServerData,
+		RetryLimit: defaultRetryLimit,
+		Handler:    (&taskUpdateServerData{t}).execute,
+	})
 
 	return nil
 }

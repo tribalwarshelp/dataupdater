@@ -64,6 +64,7 @@ func (q *queue) registerQueue(name QueueName, limit int) taskq.Queue {
 		Name:               string(name),
 		ReservationTimeout: time.Minute * 2,
 		Redis:              q.redis,
+		MinNumWorker:       int32(limit),
 		MaxNumWorker:       int32(limit),
 	})
 }
