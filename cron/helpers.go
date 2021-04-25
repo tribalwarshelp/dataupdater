@@ -1,15 +1,7 @@
 package cron
 
-import (
-	"time"
-)
-
-func createFnWithTimezone(timezone string, fn func(location *time.Location)) func() {
-	tz, err := time.LoadLocation(timezone)
-	if err != nil {
-		tz = time.UTC
-	}
+func createFnWithTimezone(timezone string, fn func(timezone string)) func() {
 	return func() {
-		fn(tz)
+		fn(timezone)
 	}
 }

@@ -69,6 +69,7 @@ func Attach(c *cron.Cron, cfg Config) error {
 	}
 	if cfg.RunOnStartup {
 		go func() {
+			h.updateEnnoblements()
 			//h.updateServerData()
 			//h.vacuumDatabase()
 			//for _, fn := range updateHistoryFuncs {

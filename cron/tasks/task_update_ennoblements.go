@@ -29,7 +29,7 @@ func (t *taskUpdateEnnoblements) execute() error {
 	for _, server := range servers {
 		s := server
 		t.queue.Add(
-			queue.MainQueue,
+			queue.EnnoblementsQueue,
 			Get(TaskUpdateServerEnnoblements).
 				WithArgs(context.Background(), fmt.Sprintf("https://%s.%s", server.Key, server.Version.Host), s),
 		)
