@@ -70,7 +70,7 @@ func Attach(c *cron.Cron, cfg Config) error {
 	if cfg.RunOnStartup {
 		go func() {
 			//h.updateServerData()
-			//vacuumDatabase()
+			h.vacuumDatabase()
 			//for _, fn := range updateHistoryFuncs {
 			//	go fn()
 			//}

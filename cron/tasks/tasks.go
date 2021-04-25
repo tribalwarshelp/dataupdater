@@ -54,6 +54,11 @@ func RegisterTasks(cfg *Config) error {
 		RetryLimit: defaultRetryLimit,
 		Handler:    (&taskVacuum{t}).execute,
 	})
+	taskq.RegisterTask(&taskq.TaskOptions{
+		Name:       TaskNameVacuumServerDB,
+		RetryLimit: defaultRetryLimit,
+		Handler:    (&taskVacuumServerDB{t}).execute,
+	})
 
 	return nil
 }
