@@ -38,13 +38,13 @@ func New(cfg *Config) error {
 
 func (q *queue) init(cfg *Config) error {
 	q.factory = redisq.NewFactory()
-	q.mainQueue = q.newQueue("main", cfg.WorkerLimit)
-	q.ennoblementsQueue = q.newQueue("ennoblements", cfg.WorkerLimit*2)
+	q.mainQueue = q.registerQueue("main", cfg.WorkerLimit)
+	q.ennoblementsQueue = q.registerQueue("ennoblements", cfg.WorkerLimit*2)
 
 	return nil
 }
 
-func (q *queue) newQueue(name string, limit int) taskq.Queue {
+func (q *queue) registerQueue(name string, limit int) taskq.Queue {
 	return q.factory.RegisterQueue(&taskq.QueueOptions{
 		Name:               name,
 		ReservationTimeout: time.Minute * 2,
