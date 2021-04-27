@@ -24,7 +24,7 @@ const (
 	defaultRetryLimit                       = 3
 )
 
-var log = logrus.WithField("package", "tasks")
+var log = logrus.WithField("package", "cron/tasks")
 
 type Config struct {
 	DB    *pg.DB

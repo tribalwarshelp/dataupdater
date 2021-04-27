@@ -19,6 +19,7 @@ type Cron struct {
 	queue     queue.Queue
 	db        *pg.DB
 	runOnInit bool
+	log       logrus.FieldLogger
 }
 
 func New(cfg *Config) (*Cron, error) {
@@ -34,6 +35,7 @@ func New(cfg *Config) (*Cron, error) {
 		queue:     q,
 		db:        cfg.DB,
 		runOnInit: cfg.RunOnInit,
+		log:       logrus.WithField("package", "cron"),
 	}
 	if err := c.init(); err != nil {
 		return nil, err
@@ -139,7 +141,7 @@ func (c *Cron) vacuumDatabase() {
 }
 
 func (c *Cron) logError(prefix string, taskName string, err error) {
-	logrus.Error(
+	c.log.Error(
 		errors.Wrapf(
 			err,
 			"%s: Couldn't add the task '%s' to the queue",
