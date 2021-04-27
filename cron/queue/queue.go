@@ -10,17 +10,17 @@ import (
 	"github.com/vmihailenco/taskq/v3/redisq"
 )
 
-type QueueName string
+type Name string
 
 const (
-	MainQueue         QueueName = "main"
-	EnnoblementsQueue QueueName = "ennoblements"
+	MainQueue         Name = "main"
+	EnnoblementsQueue Name = "ennoblements"
 )
 
 type Queue interface {
 	Start(ctx context.Context) error
 	Close() error
-	Add(name QueueName, msg *taskq.Message) error
+	Add(name Name, msg *taskq.Message) error
 }
 
 type queue struct {
@@ -54,7 +54,7 @@ func (q *queue) init(cfg *Config) error {
 	return nil
 }
 
-func (q *queue) registerQueue(name QueueName, limit int) taskq.Queue {
+func (q *queue) registerQueue(name Name, limit int) taskq.Queue {
 	return q.factory.RegisterQueue(&taskq.QueueOptions{
 		Name:               string(name),
 		ReservationTimeout: time.Minute * 2,
@@ -64,7 +64,7 @@ func (q *queue) registerQueue(name QueueName, limit int) taskq.Queue {
 	})
 }
 
-func (q *queue) getQueueByName(name QueueName) taskq.Queue {
+func (q *queue) getQueueByName(name Name) taskq.Queue {
 	switch name {
 	case MainQueue:
 		return q.mainQueue
@@ -88,7 +88,7 @@ func (q *queue) Close() error {
 	return nil
 }
 
-func (q *queue) Add(name QueueName, msg *taskq.Message) error {
+func (q *queue) Add(name Name, msg *taskq.Message) error {
 	queue := q.getQueueByName(name)
 	if queue == nil {
 		return errors.Errorf("Couldn't add the message to the queue: unknown queue name '%s'", name)

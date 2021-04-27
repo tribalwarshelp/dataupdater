@@ -23,7 +23,7 @@ func (t *taskUpdateServerHistory) execute(timezone string, server *models.Server
 		return err
 	}
 	entry := log.WithField("key", server.Key)
-	entry.Infof("%s: update of the history has started...", server.Key)
+	entry.Infof("taskUpdateServerHistory.execute: %s: update of the history has started...", server.Key)
 	err = (&workerUpdateServerHistory{
 		db:       t.db.WithParam("SERVER", pg.Safe(server.Key)),
 		server:   server,
@@ -34,7 +34,7 @@ func (t *taskUpdateServerHistory) execute(timezone string, server *models.Server
 		entry.Error(err)
 		return err
 	}
-	entry.Infof("%s: history has been updated", server.Key)
+	entry.Infof("taskUpdateServerHistory.execute: %s: history has been updated", server.Key)
 
 	return nil
 }
@@ -97,7 +97,11 @@ func (w *workerUpdateServerHistory) update() error {
 	if err != nil {
 		return err
 	}
-	defer tx.Close()
+	defer func(s *models.Server) {
+		if err := tx.Close(); err != nil {
+			log.Warn(errors.Wrapf(err, "%s: Couldn't rollback the transaction", s.Key))
+		}
+	}(w.server)
 
 	if len(ph) > 0 {
 		if _, err := w.db.Model(&ph).Insert(); err != nil {

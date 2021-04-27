@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/go-pg/pg/v10"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 
 	"github.com/robfig/cron/v3"
 	"github.com/tribalwarshelp/shared/models"
@@ -103,23 +104,49 @@ func (c *Cron) Stop() error {
 }
 
 func (c *Cron) updateServerData() {
-	c.queue.Add(queue.MainQueue, tasks.Get(tasks.TaskNameLoadVersionsAndUpdateServerData).WithArgs(context.Background()))
+	err := c.queue.Add(queue.MainQueue, tasks.Get(tasks.TaskNameLoadVersionsAndUpdateServerData).WithArgs(context.Background()))
+	if err != nil {
+		c.logError("Cron.updateServerData", tasks.TaskNameLoadVersionsAndUpdateServerData, err)
+	}
 }
 
 func (c *Cron) updateEnnoblements() {
-	c.queue.Add(queue.EnnoblementsQueue, tasks.Get(tasks.TaskUpdateEnnoblements).WithArgs(context.Background()))
+	err := c.queue.Add(queue.EnnoblementsQueue, tasks.Get(tasks.TaskUpdateEnnoblements).WithArgs(context.Background()))
+	if err != nil {
+		c.logError("Cron.updateEnnoblements", tasks.TaskUpdateEnnoblements, err)
+	}
 }
 
 func (c *Cron) updateHistory(timezone string) {
-	c.queue.Add(queue.MainQueue, tasks.Get(tasks.TaskUpdateHistory).WithArgs(context.Background(), timezone))
+	err := c.queue.Add(queue.MainQueue, tasks.Get(tasks.TaskUpdateHistory).WithArgs(context.Background(), timezone))
+	if err != nil {
+		c.logError("Cron.updateHistory", tasks.TaskUpdateHistory, err)
+	}
 }
 
 func (c *Cron) updateStats(timezone string) {
-	c.queue.Add(queue.MainQueue, tasks.Get(tasks.TaskUpdateStats).WithArgs(context.Background(), timezone))
+	err := c.queue.Add(queue.MainQueue, tasks.Get(tasks.TaskUpdateStats).WithArgs(context.Background(), timezone))
+	if err != nil {
+		c.logError("Cron.updateStats", tasks.TaskUpdateStats, err)
+	}
 }
 
 func (c *Cron) vacuumDatabase() {
-	c.queue.Add(queue.MainQueue, tasks.Get(tasks.TaskNameVacuum).WithArgs(context.Background()))
+	err := c.queue.Add(queue.MainQueue, tasks.Get(tasks.TaskNameVacuum).WithArgs(context.Background()))
+	if err != nil {
+		c.logError("Cron.vacuumDatabase", tasks.TaskNameVacuum, err)
+	}
+}
+
+func (c *Cron) logError(prefix string, taskName string, err error) {
+	logrus.Error(
+		errors.Wrapf(
+			err,
+			"%s: Couldn't add the task '%s' to the queue",
+			prefix,
+			taskName,
+		),
+	)
 }
 
 func initializeQueue(cfg *Config) (queue.Queue, error) {
@@ -128,12 +155,15 @@ func initializeQueue(cfg *Config) (queue.Queue, error) {
 		Redis:       cfg.Redis,
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "initializeQueue: Couldn't create the task q")
+		return nil, errors.Wrap(err, "initializeQueue: Couldn't create the task queue")
 	}
-	tasks.RegisterTasks(&tasks.Config{
+	err = tasks.RegisterTasks(&tasks.Config{
 		DB:    cfg.DB,
 		Queue: q,
 	})
+	if err != nil {
+		return nil, errors.Wrap(err, "initializeQueue: Couldn't create the task queue")
+	}
 	return q, nil
 }
 

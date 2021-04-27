@@ -20,7 +20,7 @@ func (t *taskUpdateServerData) execute(url string, server *models.Server) error 
 	}
 	now := time.Now()
 	entry := log.WithField("key", server.Key)
-	entry.Infof("%s: updating data...", server.Key)
+	entry.Infof("taskUpdateServerData.execute: %s: Update of the server data has started...", server.Key)
 	err := (&workerUpdateServerData{
 		db:         t.db.WithParam("SERVER", pg.Safe(server.Key)),
 		dataloader: newDataloader(url),
@@ -37,13 +37,13 @@ func (t *taskUpdateServerData) execute(url string, server *models.Server) error 
 			"duration":       duration.Nanoseconds(),
 			"durationPretty": duration.String(),
 		}).
-		Infof("%s has been updated", server.Key)
+		Infof("taskUpdateServerData.execute: %s: data has been updated", server.Key)
 	return nil
 }
 
 func (t *taskUpdateServerData) validatePayload(server *models.Server) error {
 	if server == nil {
-		return errors.Errorf("taskLoadServersAndUpdateData.validatePayload: Expected *models.Server, got nil")
+		return errors.Errorf("taskUpdateServerData.validatePayload: Expected *models.Server, got nil")
 	}
 
 	return nil
@@ -59,7 +59,7 @@ func (w *workerUpdateServerData) loadPlayers(od map[int]*models.OpponentsDefeate
 	var ennoblements = []*models.Ennoblement{}
 	err := w.db.Model(&ennoblements).DistinctOn("new_owner_id").Order("new_owner_id ASC", "ennobled_at ASC").Select()
 	if err != nil {
-		return nil, errors.Wrap(err, "loadPlayers: couldn't load ennoblements")
+		return nil, errors.Wrap(err, "workerUpdateServerData.loadPlayers: couldn't load ennoblements")
 	}
 
 	players, err := w.dataloader.LoadPlayers()
@@ -210,7 +210,11 @@ func (w *workerUpdateServerData) update() error {
 	if err != nil {
 		return err
 	}
-	defer tx.Close()
+	defer func(s *models.Server) {
+		if err := tx.Close(); err != nil {
+			log.Warn(errors.Wrapf(err, "%s: Couldn't rollback the transaction", s.Key))
+		}
+	}(w.server)
 
 	if len(tribes) > 0 {
 		ids := []int{}

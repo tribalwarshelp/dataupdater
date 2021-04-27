@@ -26,17 +26,18 @@ REDIS_PASSWORD=redis_password
 RUN_ON_INIT=true|false
 LOG_DB_QUERIES=true|false
 
-WORKER_LIMIT=1 #how many servers should update at the same time
+WORKER_LIMIT=1
 ```
 
 ### Prerequisites
 
 1. Golang
-2. PostgreSQL database
+2. PostgreSQL
+3. Redis
 
 ### Installing
 
 1. Clone this repo.
 2. Navigate to the directory where you have cloned this repo.
-3. Set the required env variables directly in your system or create .env.development file.
+3. Set the required env variables directly in your system or create .env.local file.
 4. go run main.go

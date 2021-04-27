@@ -25,14 +25,24 @@ func (t *taskUpdateEnnoblements) execute() error {
 		log.Errorln(err)
 		return err
 	}
-	log.WithField("numberOfServers", len(servers)).Info("Update of the ennoblements has started...")
+	log.WithField("numberOfServers", len(servers)).Info("taskUpdateEnnoblements.execute: Update of the ennoblements has started...")
 	for _, server := range servers {
 		s := server
-		t.queue.Add(
+		err := t.queue.Add(
 			queue.EnnoblementsQueue,
 			Get(TaskUpdateServerEnnoblements).
 				WithArgs(context.Background(), fmt.Sprintf("https://%s.%s", server.Key, server.Version.Host), s),
 		)
+		if err != nil {
+			log.Warn(
+				errors.Wrapf(
+					err,
+					"taskUpdateEnnoblements.execute: %s: Couldn't add the task '%s' for this server",
+					server.Key,
+					TaskUpdateServerEnnoblements,
+				),
+			)
+		}
 	}
 	return nil
 }

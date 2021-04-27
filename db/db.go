@@ -50,7 +50,11 @@ func prepareDB(db *pg.DB) error {
 	if err != nil {
 		return errors.Wrap(err, "Couldn't start a transaction")
 	}
-	defer tx.Close()
+	defer func() {
+		if err := tx.Close(); err != nil {
+			log.Warn(errors.Wrap(err, "prepareDB: Couldn't rollback the transaction"))
+		}
+	}()
 
 	dbModels := []interface{}{
 		(*models.SpecialServer)(nil),
@@ -140,7 +144,11 @@ func createSchema(db *pg.DB, server *models.Server, init bool) error {
 	if err != nil {
 		return errors.Wrap(err, "CreateSchema: couldn't start a transaction")
 	}
-	defer tx.Close()
+	defer func() {
+		if err := tx.Close(); err != nil {
+			log.Warn(errors.Wrap(err, "createSchema: Couldn't rollback the transaction"))
+		}
+	}()
 
 	if _, err := tx.Exec(fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s", server.Key)); err != nil {
 		return errors.Wrap(err, "CreateSchema: couldn't create the schema")

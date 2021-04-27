@@ -21,16 +21,17 @@ func (t *taskVacuumServerDB) execute(server *models.Server) error {
 		return nil
 	}
 	entry := log.WithField("key", server.Key)
-	entry.Infof("%s: vacumming the database...", server.Key)
+	entry.Infof("taskVacuumServerDB.execute: %s: vacumming the database...", server.Key)
 	err := (&workerVacuumServerDB{
-		db: t.db.WithParam("SERVER", pg.Safe(server.Key)),
+		db:     t.db.WithParam("SERVER", pg.Safe(server.Key)),
+		server: server,
 	}).vacuum()
 	if err != nil {
 		err = errors.Wrap(err, "taskVacuumServerDB.execute")
 		entry.Error(err)
 		return err
 	}
-	entry.Infof("%s: the database has been vacummed", server.Key)
+	entry.Infof("taskVacuumServerDB.execute: %s: the database has been vacummed", server.Key)
 
 	return nil
 }
@@ -44,7 +45,8 @@ func (t *taskVacuumServerDB) validatePayload(server *models.Server) error {
 }
 
 type workerVacuumServerDB struct {
-	db *pg.DB
+	db     *pg.DB
+	server *models.Server
 }
 
 func (w *workerVacuumServerDB) vacuum() error {
@@ -52,7 +54,11 @@ func (w *workerVacuumServerDB) vacuum() error {
 	if err != nil {
 		return err
 	}
-	defer tx.Close()
+	defer func(s *models.Server) {
+		if err := tx.Close(); err != nil {
+			log.Warn(errors.Wrapf(err, "%s: Couldn't rollback the transaction", s.Key))
+		}
+	}(w.server)
 
 	withNonExistentPlayers := w.db.Model(&models.Player{}).Column("id").Where("exists = false and NOW() - deleted_at > '14 days'")
 	withNonExistentTribes := w.db.Model(&models.Tribe{}).Column("id").Where("exists = false and NOW() - deleted_at > '1 days'")

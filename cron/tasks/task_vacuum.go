@@ -22,10 +22,20 @@ func (t *taskVacuum) execute() error {
 		log.Errorln(err)
 		return err
 	}
-	log.Infof("Start database vacuuming...")
+	log.Infof("taskVacuum.execute: Start database vacumming...")
 	for _, server := range servers {
 		s := server
-		t.queue.Add(queue.MainQueue, Get(TaskNameVacuumServerDB).WithArgs(context.Background(), s))
+		err := t.queue.Add(queue.MainQueue, Get(TaskNameVacuumServerDB).WithArgs(context.Background(), s))
+		if err != nil {
+			log.Warn(
+				errors.Wrapf(
+					err,
+					"taskVacuum.execute: %s: Couldn't add the task '%s' for this server",
+					server.Key,
+					TaskUpdateServerEnnoblements,
+				),
+			)
+		}
 	}
 	return nil
 }

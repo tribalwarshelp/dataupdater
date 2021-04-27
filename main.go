@@ -21,12 +21,9 @@ import (
 )
 
 func init() {
-	os.Setenv("TZ", "UTC")
-
-	if mode.Get() == mode.DevelopmentMode {
-		godotenv.Load(".env.local")
+	if err := setupENVs(); err != nil {
+		logrus.Fatal(err)
 	}
-
 	setupLogger()
 }
 
@@ -35,13 +32,21 @@ func main() {
 	if err != nil {
 		logrus.Fatal(errors.Wrap(err, "Couldn't connect to Redis"))
 	}
-	defer redisClient.Close()
+	defer func() {
+		if err := redisClient.Close(); err != nil {
+			logrus.Warn(errors.Wrap(err, "Couldn't close the Redis connection"))
+		}
+	}()
 
 	dbConn, err := db.New(&db.Config{LogQueries: envutils.GetenvBool("LOG_DB_QUERIES")})
 	if err != nil {
 		logrus.Fatal(errors.Wrap(err, "Couldn't connect to the db"))
 	}
-	defer dbConn.Close()
+	defer func() {
+		if err := dbConn.Close(); err != nil {
+			logrus.Warn(errors.Wrap(err, "Couldn't close the db connection"))
+		}
+	}()
 	logrus.Info("Connection with the database has been established")
 
 	c, err := twhelpcron.New(&twhelpcron.Config{
@@ -92,6 +97,22 @@ func setupLogger() {
 		customFormatter.FullTimestamp = true
 		logrus.SetFormatter(customFormatter)
 	}
+}
+
+func setupENVs() error {
+	err := os.Setenv("TZ", "UTC")
+	if err != nil {
+		return errors.Wrap(err, "setupENVs")
+	}
+
+	if mode.Get() == mode.DevelopmentMode {
+		err := godotenv.Load(".env.local")
+		if err != nil {
+			return errors.Wrap(err, "setupENVs")
+		}
+	}
+
+	return nil
 }
 
 func initializeRedis() (redis.UniversalClient, error) {
