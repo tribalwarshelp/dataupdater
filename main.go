@@ -13,8 +13,6 @@ import (
 	"github.com/tribalwarshelp/shared/mode"
 
 	twhelpcron "github.com/tribalwarshelp/cron/cron"
-	"github.com/tribalwarshelp/cron/cron/queue"
-	"github.com/tribalwarshelp/cron/cron/tasks"
 	"github.com/tribalwarshelp/cron/db"
 	envutils "github.com/tribalwarshelp/cron/utils/env"
 
@@ -33,46 +31,38 @@ func init() {
 }
 
 func main() {
-	client, err := initializeRedis()
+	redisClient, err := initializeRedis()
 	if err != nil {
 		logrus.Fatal(errors.Wrap(err, "Couldn't connect to Redis"))
 	}
-	defer client.Close()
+	defer redisClient.Close()
 
-	conn, err := db.New(&db.Config{LogQueries: envutils.GetenvBool("LOG_DB_QUERIES")})
+	dbConn, err := db.New(&db.Config{LogQueries: envutils.GetenvBool("LOG_DB_QUERIES")})
 	if err != nil {
 		logrus.Fatal(errors.Wrap(err, "Couldn't connect to the db"))
 	}
-	defer conn.Close()
+	defer dbConn.Close()
 	logrus.Info("Connection with the database has been established")
 
-	queue, err := queue.New(&queue.Config{
+	c, err := twhelpcron.New(&twhelpcron.Config{
+		DB:          dbConn,
+		RunOnInit:   envutils.GetenvBool("RUN_ON_INIT"),
+		Redis:       redisClient,
 		WorkerLimit: envutils.GetenvInt("WORKER_LIMIT"),
-		Redis:       client,
+		Opts: []cron.Option{
+			cron.WithChain(
+				cron.SkipIfStillRunning(
+					cron.PrintfLogger(logrus.WithField("package", "cron")),
+				),
+			),
+		},
 	})
 	if err != nil {
-		logrus.Fatal(errors.Wrap(err, "Couldn't create the task queue"))
-	}
-	tasks.RegisterTasks(&tasks.Config{
-		DB:    conn,
-		Queue: queue,
-	})
-	if err := queue.Start(context.Background()); err != nil {
 		logrus.Fatal(err)
 	}
-
-	c := cron.New(cron.WithChain(
-		cron.SkipIfStillRunning(cron.PrintfLogger(logrus.WithField("package", "cron"))),
-	))
-	if err := twhelpcron.Attach(c, twhelpcron.Config{
-		DB:           conn,
-		RunOnStartup: envutils.GetenvBool("RUN_ON_STARTUP"),
-		Queue:        queue,
-	}); err != nil {
+	if err := c.Start(context.Background()); err != nil {
 		logrus.Fatal(err)
 	}
-	c.Start()
-	defer c.Stop()
 
 	logrus.Info("Cron is running!")
 
@@ -81,7 +71,7 @@ func main() {
 	<-channel
 
 	logrus.Info("shutting down")
-	if err := queue.Close(); err != nil {
+	if err := c.Stop(); err != nil {
 		logrus.Fatal(err)
 	}
 }

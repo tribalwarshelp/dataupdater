@@ -29,7 +29,7 @@ func (t *taskLoadServersAndUpdateData) execute(version *models.Version) error {
 		return nil
 	}
 	entry := log.WithField("host", version.Host)
-	entry.Infof("%s: Loading servers", version.Host)
+	entry.Infof("taskLoadServersAndUpdateData.execute: %s: Loading servers", version.Host)
 	data, err := t.getServers(version)
 	if err != nil {
 		log.Errorln(err)
@@ -49,7 +49,7 @@ func (t *taskLoadServersAndUpdateData) execute(version *models.Version) error {
 			Version:     version,
 		}
 		if err := db.CreateSchema(t.db, server); err != nil {
-			logrus.Warn(errors.Wrapf(err, "%s: couldn't create the schema", server.Key))
+			logrus.Warn(errors.Wrapf(err, "taskLoadServersAndUpdateData.execute: %s: couldn't create the schema", server.Key))
 			continue
 		}
 		servers = append(servers, server)
@@ -64,7 +64,7 @@ func (t *taskLoadServersAndUpdateData) execute(version *models.Version) error {
 			Returning("*").
 			Insert(); err != nil {
 			err = errors.Wrap(err, "taskLoadServersAndUpdateData.execute: couldn't insert/update servers")
-			logrus.Fatal(err)
+			logrus.Error(err)
 			return err
 		}
 	}
@@ -74,7 +74,7 @@ func (t *taskLoadServersAndUpdateData) execute(version *models.Version) error {
 		Where("key NOT IN (?) AND version_code = ?", pg.In(serverKeys), version.Code).
 		Update(); err != nil {
 		err = errors.Wrap(err, "taskLoadServersAndUpdateData.execute: couldn't update server statuses")
-		logrus.Fatal(err)
+		logrus.Error(err)
 		return err
 	}
 

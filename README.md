@@ -23,7 +23,7 @@ REDIS_DB=redis_db
 REDIS_USER=redis_user
 REDIS_PASSWORD=redis_password
 
-RUN_ON_STARTUP=true|false
+RUN_ON_INIT=true|false
 LOG_DB_QUERIES=true|false
 
 WORKER_LIMIT=1 #how many servers should update at the same time
