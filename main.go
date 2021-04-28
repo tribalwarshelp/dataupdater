@@ -47,7 +47,6 @@ func main() {
 			logrus.Warn(errors.Wrap(err, "Couldn't close the db connection"))
 		}
 	}()
-	logrus.Info("Connection with the database has been established")
 
 	c, err := twhelpcron.New(&twhelpcron.Config{
 		DB:          dbConn,
