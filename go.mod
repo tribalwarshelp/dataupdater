@@ -3,7 +3,7 @@ module github.com/tribalwarshelp/cron
 go 1.16
 
 require (
-	github.com/Kichiyaki/go-pg-logrus-query-logger/v10 v10.0.0-20210423175217-c83fa01c60d7
+	github.com/Kichiyaki/go-pg-logrus-query-logger/v10 v10.0.0-20210428180109-fb97298564d9
 	github.com/Kichiyaki/go-php-serialize v0.0.0-20200601110855-47b6982acf83
 	github.com/go-pg/pg/v10 v10.9.1
 	github.com/go-redis/redis/v8 v8.8.2
