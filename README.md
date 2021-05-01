@@ -2,14 +2,14 @@
 
 Features:
 
-- Adds automatically new TribalWars servers.
-- Fetches TribalWars servers data (players, tribes, ODA, ODD, ODS, OD, conquers, configs).
+- Adds automatically new servers.
+- Fetches and updates servers data (players, tribes, ODA, ODD, ODS, OD, conquers, configs).
 - Saves daily player/tribe stats, player/tribe history, tribe changes, player name changes, server stats.
 - Cleans the database from old player/tribe stats, player/tribe history.
 
 ## Development
 
-**Required env variables to run this cron:**
+**Required env variables:**
 
 ```
 DB_USER=your_db_user
