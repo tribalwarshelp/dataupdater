@@ -47,21 +47,23 @@ type workerDeleteNonExistentVillages struct {
 }
 
 func (w *workerDeleteNonExistentVillages) delete() error {
-	var villagesFromDB []*models.Village
-	if err := w.db.Model(&villagesFromDB).Column("id").Select(); err != nil {
-		return errors.Wrap(err, "workerDeleteNonExistentVillages.delete")
-	}
 	villages, err := w.dataloader.LoadVillages()
 	if err != nil {
 		return errors.Wrap(err, "workerDeleteNonExistentVillages.delete")
 	}
 	var idsToDelete []int
 	searchableByVillageID := &villagesSearchableByID{villages}
-	for _, village := range villagesFromDB {
-		index := searchByID(searchableByVillageID, village.ID)
-		if index < 0 {
-			idsToDelete = append(idsToDelete, village.ID)
-		}
+	if err := w.db.
+		Model(&models.Village{}).
+		Column("id").
+		ForEach(func(village *models.Village) error {
+			index := searchByID(searchableByVillageID, village.ID)
+			if index < 0 {
+				idsToDelete = append(idsToDelete, village.ID)
+			}
+			return nil
+		}); err != nil {
+		return errors.Wrap(err, "workerDeleteNonExistentVillages.delete")
 	}
 
 	totalDeleted := 0
