@@ -6,7 +6,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/vmihailenco/taskq/v3"
 
-	"github.com/tribalwarshelp/cron/cron/queue"
+	"github.com/tribalwarshelp/cron/internal/cron/queue"
 )
 
 const (

@@ -11,8 +11,8 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/tribalwarshelp/cron/cron/queue"
-	"github.com/tribalwarshelp/cron/db"
+	"github.com/tribalwarshelp/cron/internal/cron/queue"
+	"github.com/tribalwarshelp/cron/internal/db"
 )
 
 const (

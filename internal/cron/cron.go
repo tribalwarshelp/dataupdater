@@ -10,8 +10,8 @@ import (
 	"github.com/robfig/cron/v3"
 	"github.com/tribalwarshelp/shared/models"
 
-	"github.com/tribalwarshelp/cron/cron/queue"
-	"github.com/tribalwarshelp/cron/cron/tasks"
+	"github.com/tribalwarshelp/cron/internal/cron/queue"
+	"github.com/tribalwarshelp/cron/internal/cron/tasks"
 )
 
 type Cron struct {

@@ -9,7 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/tribalwarshelp/shared/models"
 
-	envutils "github.com/tribalwarshelp/cron/utils/env"
+	envutils "github.com/tribalwarshelp/cron/internal/utils/env"
 )
 
 var log = logrus.WithField("package", "db")

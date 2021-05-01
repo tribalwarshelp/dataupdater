@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/tribalwarshelp/cron/cron/queue"
+	"github.com/tribalwarshelp/cron/internal/cron/queue"
 )
 
 type task struct {

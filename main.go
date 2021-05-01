@@ -12,9 +12,9 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/tribalwarshelp/shared/mode"
 
-	twhelpcron "github.com/tribalwarshelp/cron/cron"
-	"github.com/tribalwarshelp/cron/db"
-	envutils "github.com/tribalwarshelp/cron/utils/env"
+	twhelpcron "github.com/tribalwarshelp/cron/internal/cron"
+	"github.com/tribalwarshelp/cron/internal/db"
+	envutils "github.com/tribalwarshelp/cron/internal/utils/env"
 
 	"github.com/joho/godotenv"
 	"github.com/robfig/cron/v3"
@@ -80,6 +80,22 @@ func main() {
 	}
 }
 
+func setupENVs() error {
+	err := os.Setenv("TZ", "UTC")
+	if err != nil {
+		return errors.Wrap(err, "setupENVs")
+	}
+
+	if mode.Get() == mode.DevelopmentMode {
+		err := godotenv.Load(".env.local")
+		if err != nil {
+			return errors.Wrap(err, "setupENVs")
+		}
+	}
+
+	return nil
+}
+
 func setupLogger() {
 	if mode.Get() == mode.DevelopmentMode {
 		logrus.SetLevel(logrus.DebugLevel)
@@ -96,22 +112,6 @@ func setupLogger() {
 		customFormatter.FullTimestamp = true
 		logrus.SetFormatter(customFormatter)
 	}
-}
-
-func setupENVs() error {
-	err := os.Setenv("TZ", "UTC")
-	if err != nil {
-		return errors.Wrap(err, "setupENVs")
-	}
-
-	if mode.Get() == mode.DevelopmentMode {
-		err := godotenv.Load(".env.local")
-		if err != nil {
-			return errors.Wrap(err, "setupENVs")
-		}
-	}
-
-	return nil
 }
 
 func initializeRedis() (redis.UniversalClient, error) {

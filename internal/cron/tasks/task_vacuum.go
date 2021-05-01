@@ -5,7 +5,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/tribalwarshelp/shared/models"
 
-	"github.com/tribalwarshelp/cron/cron/queue"
+	"github.com/tribalwarshelp/cron/internal/cron/queue"
 )
 
 type taskVacuum struct {
