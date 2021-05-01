@@ -1,6 +1,7 @@
 package tasks
 
 import (
+	"context"
 	"github.com/go-pg/pg/v10"
 	"github.com/go-pg/pg/v10/orm"
 	"github.com/pkg/errors"
@@ -55,41 +56,92 @@ type workerUpdateServerData struct {
 	server     *models.Server
 }
 
-func (w *workerUpdateServerData) loadPlayers(od map[int]*models.OpponentsDefeated) ([]*models.Player, error) {
+type loadPlayersResult struct {
+	ids             []int
+	players         []*models.Player
+	playersToServer []*models.PlayerToServer
+	deletedPlayers  []int
+	numberOfPlayers int
+}
+
+func (w *workerUpdateServerData) loadPlayers(od map[int]*models.OpponentsDefeated) (loadPlayersResult, error) {
 	var ennoblements []*models.Ennoblement
-	err := w.db.Model(&ennoblements).DistinctOn("new_owner_id").Order("new_owner_id ASC", "ennobled_at ASC").Select()
-	if err != nil {
-		return nil, errors.Wrap(err, "workerUpdateServerData.loadPlayers: couldn't load ennoblements")
+	result := loadPlayersResult{}
+	if err := w.db.
+		Model(&ennoblements).
+		DistinctOn("new_owner_id").
+		Order("new_owner_id ASC", "ennobled_at ASC").
+		Select(); err != nil {
+		return result, errors.Wrap(err, "workerUpdateServerData.loadPlayers: couldn't load ennoblements")
 	}
 
-	players, err := w.dataloader.LoadPlayers()
+	var err error
+	result.players, err = w.dataloader.LoadPlayers()
 	if err != nil {
-		return nil, err
+		return result, err
 	}
+	result.numberOfPlayers = len(result.players)
 
 	now := time.Now()
-	searchableByNewOwnerID := &ennoblementsSearchableByNewOwnerID{ennoblements: ennoblements}
-	for _, player := range players {
+	result.playersToServer = make([]*models.PlayerToServer, result.numberOfPlayers)
+	result.ids = make([]int, result.numberOfPlayers)
+	searchableByNewOwnerID := &ennoblementsSearchableByNewOwnerID{ennoblements}
+	for index, player := range result.players {
 		playerOD, ok := od[player.ID]
 		if ok {
 			player.OpponentsDefeated = *playerOD
 		}
+
 		firstEnnoblementIndex := searchByID(searchableByNewOwnerID, player.ID)
-		if firstEnnoblementIndex != -1 {
+		if firstEnnoblementIndex >= 0 {
 			firstEnnoblement := ennoblements[firstEnnoblementIndex]
 			diffInDays := getDateDifferenceInDays(now, firstEnnoblement.EnnobledAt)
 			player.DailyGrowth = calcPlayerDailyGrowth(diffInDays, player.Points)
 		}
+
+		result.playersToServer[index] = &models.PlayerToServer{
+			PlayerID:  player.ID,
+			ServerKey: w.server.Key,
+		}
+
+		result.ids[index] = player.ID
 	}
-	return players, nil
+
+	searchablePlayers := &playersSearchableByID{result.players}
+	if err := w.db.
+		Model(&models.Player{}).
+		Column("id").
+		Where("exists = true").
+		ForEach(func(player *models.Player) error {
+			if index := searchByID(searchablePlayers, player.ID); index < 0 {
+				result.deletedPlayers = append(result.deletedPlayers, player.ID)
+			}
+			return nil
+		}); err != nil {
+		return result, errors.Wrap(err, "workerUpdateServerData.loadPlayers: Players that have been deleted couldn't be detected")
+	}
+
+	return result, nil
 }
 
-func (w *workerUpdateServerData) loadTribes(od map[int]*models.OpponentsDefeated, numberOfVillages int) ([]*models.Tribe, error) {
-	tribes, err := w.dataloader.LoadTribes()
+type loadTribesResult struct {
+	ids            []int
+	tribes         []*models.Tribe
+	deletedTribes  []int
+	numberOfTribes int
+}
+
+func (w *workerUpdateServerData) loadTribes(od map[int]*models.OpponentsDefeated, numberOfVillages int) (loadTribesResult, error) {
+	var err error
+	result := loadTribesResult{}
+	result.tribes, err = w.dataloader.LoadTribes()
 	if err != nil {
-		return nil, err
+		return result, errors.Wrap(err, "workerUpdateServerData.loadTribes")
 	}
-	for _, tribe := range tribes {
+
+	result.numberOfTribes = len(result.tribes)
+	result.ids = make([]int, result.numberOfTribes)
+	for index, tribe := range result.tribes {
 		tribeOD, ok := od[tribe.ID]
 		if ok {
 			tribe.OpponentsDefeated = *tribeOD
@@ -99,8 +151,24 @@ func (w *workerUpdateServerData) loadTribes(od map[int]*models.OpponentsDefeated
 		} else {
 			tribe.Dominance = 0
 		}
+		result.ids[index] = tribe.ID
 	}
-	return tribes, nil
+
+	searchableTribes := &tribesSearchableByID{result.tribes}
+	if err := w.db.
+		Model(&models.Tribe{}).
+		Column("id").
+		Where("exists = true").
+		ForEach(func(tribe *models.Tribe) error {
+			if index := searchByID(searchableTribes, tribe.ID); index < 0 {
+				result.deletedTribes = append(result.deletedTribes, tribe.ID)
+			}
+			return nil
+		}); err != nil {
+		return result, errors.Wrap(err, "workerUpdateServerData.loadTribes: Tribes that have been deleted couldn't be detected")
+	}
+
+	return result, nil
 }
 
 func (w *workerUpdateServerData) calculateODifference(od1 models.OpponentsDefeated, od2 models.OpponentsDefeated) models.OpponentsDefeated {
@@ -121,7 +189,7 @@ func (w *workerUpdateServerData) calculateTodaysTribeStats(
 	history []*models.TribeHistory,
 ) []*models.DailyTribeStats {
 	var todaysStats []*models.DailyTribeStats
-	searchableTribes := makeTribesSearchable(tribes)
+	searchableTribes := &tribesSearchableByID{tribes}
 
 	for _, historyRecord := range history {
 		if index := searchByID(searchableTribes, historyRecord.TribeID); index != -1 {
@@ -143,10 +211,12 @@ func (w *workerUpdateServerData) calculateTodaysTribeStats(
 	return todaysStats
 }
 
-func (w *workerUpdateServerData) calculateDailyPlayerStats(players []*models.Player,
-	history []*models.PlayerHistory) []*models.DailyPlayerStats {
+func (w *workerUpdateServerData) calculateDailyPlayerStats(
+	players []*models.Player,
+	history []*models.PlayerHistory,
+) []*models.DailyPlayerStats {
 	var todaysStats []*models.DailyPlayerStats
-	searchablePlayers := makePlayersSearchable(players)
+	searchablePlayers := &playersSearchableByID{players}
 
 	for _, historyRecord := range history {
 		if index := searchByID(searchablePlayers, historyRecord.PlayerID); index != -1 {
@@ -182,17 +252,15 @@ func (w *workerUpdateServerData) update() error {
 	}
 	numberOfVillages := len(villages)
 
-	tribes, err := w.loadTribes(tod, countPlayerVillages(villages))
+	tribesResult, err := w.loadTribes(tod, countPlayerVillages(villages))
 	if err != nil {
 		return errors.Wrap(err, "workerUpdateServerData.update")
 	}
-	numberOfTribes := len(tribes)
 
-	players, err := w.loadPlayers(pod)
+	playersResult, err := w.loadPlayers(pod)
 	if err != nil {
 		return errors.Wrap(err, "workerUpdateServerData.update")
 	}
-	numberOfPlayers := len(players)
 
 	cfg, err := w.dataloader.GetConfig()
 	if err != nil {
@@ -209,153 +277,150 @@ func (w *workerUpdateServerData) update() error {
 		return errors.Wrap(err, "workerUpdateServerData.update")
 	}
 
-	tx, err := w.db.Begin()
-	if err != nil {
-		return err
-	}
-	defer func(s *models.Server) {
-		if err := tx.Close(); err != nil {
-			log.Warn(errors.Wrapf(err, "%s: Couldn't rollback the transaction", s.Key))
-		}
-	}(w.server)
-
-	if len(tribes) > 0 {
-		var ids []int
-		for _, tribe := range tribes {
-			ids = append(ids, tribe.ID)
+	return w.db.RunInTransaction(context.Background(), func(tx *pg.Tx) error {
+		if len(tribesResult.deletedTribes) > 0 {
+			if _, err := tx.Model(&models.Tribe{}).
+				Where("tribe.id  = ANY (?)", pg.Array(tribesResult.deletedTribes)).
+				Set("exists = false").
+				Set("deleted_at = now()").
+				Set("dominance = 0").
+				Update(); err != nil && err != pg.ErrNoRows {
+				return errors.Wrap(err, "couldn't update non-existent tribes")
+			}
 		}
 
-		if _, err := tx.Model(&tribes).
-			OnConflict("(id) DO UPDATE").
-			Set("name = EXCLUDED.name").
-			Set("tag = EXCLUDED.tag").
-			Set("total_members = EXCLUDED.total_members").
-			Set("total_villages = EXCLUDED.total_villages").
-			Set("points = EXCLUDED.points").
-			Set("all_points = EXCLUDED.all_points").
-			Set("rank = EXCLUDED.rank").
-			Set("exists = EXCLUDED.exists").
-			Set("dominance = EXCLUDED.dominance").
-			Apply(appendODSetClauses).
-			Insert(); err != nil {
-			return errors.Wrap(err, "couldn't insert tribes")
-		}
-		if _, err := tx.Model(&tribes).
-			Where("NOT (tribe.id  = ANY (?))", pg.Array(ids)).
-			Set("exists = false").
-			Update(); err != nil && err != pg.ErrNoRows {
-			return errors.Wrap(err, "couldn't update non-existent tribes")
-		}
-
-		var tribesHistory []*models.TribeHistory
-		if err := w.db.Model(&tribesHistory).
-			DistinctOn("tribe_id").
-			Column("*").
-			Where("tribe_id = ANY (?)", pg.Array(ids)).
-			Order("tribe_id DESC", "create_date DESC").
-			Select(); err != nil && err != pg.ErrNoRows {
-			return errors.Wrap(err, "couldn't select tribe history records")
-		}
-		todaysTribeStats := w.calculateTodaysTribeStats(tribes, tribesHistory)
-		if len(todaysTribeStats) > 0 {
-			if _, err := tx.
-				Model(&todaysTribeStats).
-				OnConflict("ON CONSTRAINT daily_tribe_stats_tribe_id_create_date_key DO UPDATE").
-				Set("members = EXCLUDED.members").
-				Set("villages = EXCLUDED.villages").
+		if tribesResult.numberOfTribes > 0 {
+			if _, err := tx.Model(&tribesResult.tribes).
+				OnConflict("(id) DO UPDATE").
+				Set("name = EXCLUDED.name").
+				Set("tag = EXCLUDED.tag").
+				Set("total_members = EXCLUDED.total_members").
+				Set("total_villages = EXCLUDED.total_villages").
 				Set("points = EXCLUDED.points").
 				Set("all_points = EXCLUDED.all_points").
 				Set("rank = EXCLUDED.rank").
+				Set("exists = EXCLUDED.exists").
 				Set("dominance = EXCLUDED.dominance").
+				Set("deleted_at = null").
 				Apply(appendODSetClauses).
 				Insert(); err != nil {
-				return errors.Wrap(err, "couldn't insert today's tribe stats")
+				return errors.Wrap(err, "couldn't insert tribes")
+			}
+
+			var tribesHistory []*models.TribeHistory
+			if err := tx.
+				Model(&tribesHistory).
+				DistinctOn("tribe_id").
+				Column("tribe_history.*").
+				Where("tribe.exists = true").
+				Order("tribe_id DESC", "create_date DESC").
+				Relation("Tribe._").
+				Select(); err != nil && err != pg.ErrNoRows {
+				return errors.Wrap(err, "couldn't select tribe history records")
+			}
+			todaysTribeStats := w.calculateTodaysTribeStats(tribesResult.tribes, tribesHistory)
+			if len(todaysTribeStats) > 0 {
+				if _, err := tx.
+					Model(&todaysTribeStats).
+					OnConflict("ON CONSTRAINT daily_tribe_stats_tribe_id_create_date_key DO UPDATE").
+					Set("members = EXCLUDED.members").
+					Set("villages = EXCLUDED.villages").
+					Set("points = EXCLUDED.points").
+					Set("all_points = EXCLUDED.all_points").
+					Set("rank = EXCLUDED.rank").
+					Set("dominance = EXCLUDED.dominance").
+					Apply(appendODSetClauses).
+					Insert(); err != nil {
+					return errors.Wrap(err, "couldn't insert today's tribe stats")
+				}
 			}
 		}
-	}
 
-	if len(players) > 0 {
-		var ids []int
-		for _, player := range players {
-			ids = append(ids, player.ID)
-		}
-		if _, err := tx.Model(&players).
-			OnConflict("(id) DO UPDATE").
-			Set("name = EXCLUDED.name").
-			Set("total_villages = EXCLUDED.total_villages").
-			Set("points = EXCLUDED.points").
-			Set("rank = EXCLUDED.rank").
-			Set("exists = EXCLUDED.exists").
-			Set("tribe_id = EXCLUDED.tribe_id").
-			Set("daily_growth = EXCLUDED.daily_growth").
-			Apply(appendODSetClauses).
-			Insert(); err != nil {
-			return errors.Wrap(err, "couldn't insert players")
-		}
-		if _, err := tx.Model(&models.Player{}).
-			Where("NOT (player.id = ANY (?))", pg.Array(ids)).
-			Set("exists = false").
-			Set("tribe_id = 0").
-			Update(); err != nil && err != pg.ErrNoRows {
-			return errors.Wrap(err, "couldn't update non-existent players")
+		if len(playersResult.deletedPlayers) > 0 {
+			if _, err := tx.Model(&models.Player{}).
+				Where("player.id = ANY (?)", pg.Array(playersResult.deletedPlayers)).
+				Set("exists = false").
+				Set("tribe_id = 0").
+				Update(); err != nil && err != pg.ErrNoRows {
+				return errors.Wrap(err, "couldn't mark players as deleted")
+			}
 		}
 
-		var playerHistory []*models.PlayerHistory
-		if err := w.db.Model(&playerHistory).
-			DistinctOn("player_id").
-			Column("*").
-			Where("player_id = ANY (?)", pg.Array(ids)).
-			Order("player_id DESC", "create_date DESC").Select(); err != nil && err != pg.ErrNoRows {
-			return errors.Wrap(err, "couldn't select player history records")
-		}
-		todaysPlayerStats := w.calculateDailyPlayerStats(players, playerHistory)
-		if len(todaysPlayerStats) > 0 {
-			if _, err := tx.
-				Model(&todaysPlayerStats).
-				OnConflict("ON CONSTRAINT daily_player_stats_player_id_create_date_key DO UPDATE").
-				Set("villages = EXCLUDED.villages").
+		if playersResult.numberOfPlayers > 0 {
+			if _, err := tx.Model(&playersResult.players).
+				OnConflict("(id) DO UPDATE").
+				Set("name = EXCLUDED.name").
+				Set("total_villages = EXCLUDED.total_villages").
 				Set("points = EXCLUDED.points").
 				Set("rank = EXCLUDED.rank").
+				Set("exists = EXCLUDED.exists").
+				Set("tribe_id = EXCLUDED.tribe_id").
+				Set("daily_growth = EXCLUDED.daily_growth").
+				Set("deleted_at = null").
 				Apply(appendODSetClauses).
 				Insert(); err != nil {
-				return errors.Wrap(err, "couldn't insert today's player stats")
+				return errors.Wrap(err, "couldn't insert players")
+			}
+
+			var playerHistory []*models.PlayerHistory
+			if err := tx.Model(&playerHistory).
+				DistinctOn("player_id").
+				Column("player_history.*").
+				Where("player.exists = true").
+				Relation("Player._").
+				Order("player_id DESC", "create_date DESC").Select(); err != nil && err != pg.ErrNoRows {
+				return errors.Wrap(err, "couldn't select player history records")
+			}
+			todaysPlayerStats := w.calculateDailyPlayerStats(playersResult.players, playerHistory)
+			if len(todaysPlayerStats) > 0 {
+				if _, err := tx.
+					Model(&todaysPlayerStats).
+					OnConflict("ON CONSTRAINT daily_player_stats_player_id_create_date_key DO UPDATE").
+					Set("villages = EXCLUDED.villages").
+					Set("points = EXCLUDED.points").
+					Set("rank = EXCLUDED.rank").
+					Apply(appendODSetClauses).
+					Insert(); err != nil {
+					return errors.Wrap(err, "couldn't insert today's player stats")
+				}
 			}
 		}
-	}
 
-	if len(villages) > 0 {
-		if _, err := tx.Model(&villages).
-			OnConflict("(id) DO UPDATE").
-			Set("name = EXCLUDED.name").
-			Set("points = EXCLUDED.points").
-			Set("x = EXCLUDED.x").
-			Set("y = EXCLUDED.y").
-			Set("bonus = EXCLUDED.bonus").
-			Set("player_id = EXCLUDED.player_id").
-			Insert(); err != nil {
-			return errors.Wrap(err, "couldn't insert villages")
+		if len(playersResult.playersToServer) > 0 {
+			if _, err := tx.Model(&playersResult.playersToServer).OnConflict("DO NOTHING").Insert(); err != nil {
+				return errors.Wrap(err, "couldn't associate players with the server")
+			}
 		}
-	}
 
-	if _, err := tx.Model(w.server).
-		Set("data_updated_at = ?", time.Now()).
-		Set("unit_config = ?", unitCfg).
-		Set("building_config = ?", buildingCfg).
-		Set("config = ?", cfg).
-		Set("number_of_players = ?", numberOfPlayers).
-		Set("number_of_tribes = ?", numberOfTribes).
-		Set("number_of_villages = ?", numberOfVillages).
-		Returning("*").
-		WherePK().
-		Update(); err != nil {
-		return errors.Wrap(err, "couldn't update server")
-	}
+		if len(villages) > 0 {
+			if _, err := tx.Model(&villages).
+				OnConflict("(id) DO UPDATE").
+				Set("name = EXCLUDED.name").
+				Set("points = EXCLUDED.points").
+				Set("x = EXCLUDED.x").
+				Set("y = EXCLUDED.y").
+				Set("bonus = EXCLUDED.bonus").
+				Set("player_id = EXCLUDED.player_id").
+				Insert(); err != nil {
+				return errors.Wrap(err, "couldn't insert villages")
+			}
+		}
 
-	if err := tx.Commit(); err != nil {
-		return err
-	}
-
-	return nil
+		if _, err := tx.Model(w.server).
+			Set("data_updated_at = ?", time.Now()).
+			Set("unit_config = ?", unitCfg).
+			Set("building_config = ?", buildingCfg).
+			Set("config = ?", cfg).
+			Set("number_of_players = ?", playersResult.numberOfPlayers).
+			Set("number_of_tribes = ?", tribesResult.numberOfTribes).
+			Set("number_of_villages = ?", numberOfVillages).
+			Returning("*").
+			WherePK().
+			Update(); err != nil {
+			return errors.Wrap(err, "couldn't update server")
+		}
+		return nil
+	})
 }
 
 func appendODSetClauses(q *orm.Query) (*orm.Query, error) {
