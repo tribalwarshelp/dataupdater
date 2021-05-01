@@ -1,27 +1,65 @@
-package cron
+package tasks
 
 import (
-	"time"
-
-	"github.com/tribalwarshelp/shared/models"
-	"github.com/tribalwarshelp/shared/tw/dataloader"
-
 	"github.com/go-pg/pg/v10"
 	"github.com/go-pg/pg/v10/orm"
 	"github.com/pkg/errors"
+	"github.com/tribalwarshelp/shared/models"
+	"github.com/tribalwarshelp/shared/tw/dataloader"
+	"time"
 )
 
-type updateServerDataWorker struct {
+type taskUpdateServerData struct {
+	*task
+}
+
+func (t *taskUpdateServerData) execute(url string, server *models.Server) error {
+	if err := t.validatePayload(server); err != nil {
+		log.Debug(err)
+		return nil
+	}
+	now := time.Now()
+	entry := log.WithField("key", server.Key)
+	entry.Infof("taskUpdateServerData.execute: %s: Update of the server data has started...", server.Key)
+	err := (&workerUpdateServerData{
+		db:         t.db.WithParam("SERVER", pg.Safe(server.Key)),
+		dataloader: newDataloader(url),
+		server:     server,
+	}).update()
+	if err != nil {
+		err = errors.Wrap(err, "taskUpdateServerData.execute")
+		entry.Error(err)
+		return err
+	}
+	duration := time.Since(now)
+	entry.
+		WithFields(map[string]interface{}{
+			"duration":       duration.Nanoseconds(),
+			"durationPretty": duration.String(),
+		}).
+		Infof("taskUpdateServerData.execute: %s: data has been updated", server.Key)
+	return nil
+}
+
+func (t *taskUpdateServerData) validatePayload(server *models.Server) error {
+	if server == nil {
+		return errors.New("taskUpdateServerData.validatePayload: Expected *models.Server, got nil")
+	}
+
+	return nil
+}
+
+type workerUpdateServerData struct {
 	db         *pg.DB
 	dataloader dataloader.DataLoader
 	server     *models.Server
 }
 
-func (w *updateServerDataWorker) loadPlayers(od map[int]*models.OpponentsDefeated) ([]*models.Player, error) {
-	ennoblements := []*models.Ennoblement{}
+func (w *workerUpdateServerData) loadPlayers(od map[int]*models.OpponentsDefeated) ([]*models.Player, error) {
+	var ennoblements []*models.Ennoblement
 	err := w.db.Model(&ennoblements).DistinctOn("new_owner_id").Order("new_owner_id ASC", "ennobled_at ASC").Select()
 	if err != nil {
-		return nil, errors.Wrap(err, "loadPlayers: cannot load ennoblements")
+		return nil, errors.Wrap(err, "workerUpdateServerData.loadPlayers: couldn't load ennoblements")
 	}
 
 	players, err := w.dataloader.LoadPlayers()
@@ -46,7 +84,7 @@ func (w *updateServerDataWorker) loadPlayers(od map[int]*models.OpponentsDefeate
 	return players, nil
 }
 
-func (w *updateServerDataWorker) loadTribes(od map[int]*models.OpponentsDefeated, numberOfVillages int) ([]*models.Tribe, error) {
+func (w *workerUpdateServerData) loadTribes(od map[int]*models.OpponentsDefeated, numberOfVillages int) ([]*models.Tribe, error) {
 	tribes, err := w.dataloader.LoadTribes()
 	if err != nil {
 		return nil, err
@@ -65,7 +103,7 @@ func (w *updateServerDataWorker) loadTribes(od map[int]*models.OpponentsDefeated
 	return tribes, nil
 }
 
-func (w *updateServerDataWorker) calculateODifference(od1 models.OpponentsDefeated, od2 models.OpponentsDefeated) models.OpponentsDefeated {
+func (w *workerUpdateServerData) calculateODifference(od1 models.OpponentsDefeated, od2 models.OpponentsDefeated) models.OpponentsDefeated {
 	return models.OpponentsDefeated{
 		RankAtt:    (od1.RankAtt - od2.RankAtt) * -1,
 		ScoreAtt:   od1.ScoreAtt - od2.ScoreAtt,
@@ -78,9 +116,11 @@ func (w *updateServerDataWorker) calculateODifference(od1 models.OpponentsDefeat
 	}
 }
 
-func (w *updateServerDataWorker) calculateTodaysTribeStats(tribes []*models.Tribe,
-	history []*models.TribeHistory) []*models.DailyTribeStats {
-	todaysStats := []*models.DailyTribeStats{}
+func (w *workerUpdateServerData) calculateTodaysTribeStats(
+	tribes []*models.Tribe,
+	history []*models.TribeHistory,
+) []*models.DailyTribeStats {
+	var todaysStats []*models.DailyTribeStats
 	searchableTribes := makeTribesSearchable(tribes)
 
 	for _, historyRecord := range history {
@@ -103,9 +143,9 @@ func (w *updateServerDataWorker) calculateTodaysTribeStats(tribes []*models.Trib
 	return todaysStats
 }
 
-func (w *updateServerDataWorker) calculateDailyPlayerStats(players []*models.Player,
+func (w *workerUpdateServerData) calculateDailyPlayerStats(players []*models.Player,
 	history []*models.PlayerHistory) []*models.DailyPlayerStats {
-	todaysStats := []*models.DailyPlayerStats{}
+	var todaysStats []*models.DailyPlayerStats
 	searchablePlayers := makePlayersSearchable(players)
 
 	for _, historyRecord := range history {
@@ -125,55 +165,62 @@ func (w *updateServerDataWorker) calculateDailyPlayerStats(players []*models.Pla
 	return todaysStats
 }
 
-func (w *updateServerDataWorker) update() error {
+func (w *workerUpdateServerData) update() error {
 	pod, err := w.dataloader.LoadOD(false)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "workerUpdateServerData.update")
 	}
+
 	tod, err := w.dataloader.LoadOD(true)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "workerUpdateServerData.update")
 	}
 
 	villages, err := w.dataloader.LoadVillages()
 	if err != nil {
-		return err
+		return errors.Wrap(err, "workerUpdateServerData.update")
 	}
 	numberOfVillages := len(villages)
 
 	tribes, err := w.loadTribes(tod, countPlayerVillages(villages))
 	if err != nil {
-		return err
+		return errors.Wrap(err, "workerUpdateServerData.update")
 	}
 	numberOfTribes := len(tribes)
 
 	players, err := w.loadPlayers(pod)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "workerUpdateServerData.update")
 	}
 	numberOfPlayers := len(players)
 
 	cfg, err := w.dataloader.GetConfig()
 	if err != nil {
-		return err
+		return errors.Wrap(err, "workerUpdateServerData.update")
 	}
+
 	buildingCfg, err := w.dataloader.GetBuildingConfig()
 	if err != nil {
-		return err
+		return errors.Wrap(err, "workerUpdateServerData.update")
 	}
+
 	unitCfg, err := w.dataloader.GetUnitConfig()
 	if err != nil {
-		return err
+		return errors.Wrap(err, "workerUpdateServerData.update")
 	}
 
 	tx, err := w.db.Begin()
 	if err != nil {
 		return err
 	}
-	defer tx.Close()
+	defer func(s *models.Server) {
+		if err := tx.Close(); err != nil {
+			log.Warn(errors.Wrapf(err, "%s: Couldn't rollback the transaction", s.Key))
+		}
+	}(w.server)
 
 	if len(tribes) > 0 {
-		ids := []int{}
+		var ids []int
 		for _, tribe := range tribes {
 			ids = append(ids, tribe.ID)
 		}
@@ -191,23 +238,23 @@ func (w *updateServerDataWorker) update() error {
 			Set("dominance = EXCLUDED.dominance").
 			Apply(appendODSetClauses).
 			Insert(); err != nil {
-			return errors.Wrap(err, "cannot insert tribes")
+			return errors.Wrap(err, "couldn't insert tribes")
 		}
 		if _, err := tx.Model(&tribes).
 			Where("NOT (tribe.id  = ANY (?))", pg.Array(ids)).
 			Set("exists = false").
 			Update(); err != nil && err != pg.ErrNoRows {
-			return errors.Wrap(err, "cannot update nonexistent tribes")
+			return errors.Wrap(err, "couldn't update non-existent tribes")
 		}
 
-		tribesHistory := []*models.TribeHistory{}
+		var tribesHistory []*models.TribeHistory
 		if err := w.db.Model(&tribesHistory).
 			DistinctOn("tribe_id").
 			Column("*").
 			Where("tribe_id = ANY (?)", pg.Array(ids)).
 			Order("tribe_id DESC", "create_date DESC").
 			Select(); err != nil && err != pg.ErrNoRows {
-			return errors.Wrap(err, "cannot select tribe history records")
+			return errors.Wrap(err, "couldn't select tribe history records")
 		}
 		todaysTribeStats := w.calculateTodaysTribeStats(tribes, tribesHistory)
 		if len(todaysTribeStats) > 0 {
@@ -222,13 +269,13 @@ func (w *updateServerDataWorker) update() error {
 				Set("dominance = EXCLUDED.dominance").
 				Apply(appendODSetClauses).
 				Insert(); err != nil {
-				return errors.Wrap(err, "cannot insert today's tribe stats")
+				return errors.Wrap(err, "couldn't insert today's tribe stats")
 			}
 		}
 	}
 
 	if len(players) > 0 {
-		ids := []int{}
+		var ids []int
 		for _, player := range players {
 			ids = append(ids, player.ID)
 		}
@@ -243,23 +290,23 @@ func (w *updateServerDataWorker) update() error {
 			Set("daily_growth = EXCLUDED.daily_growth").
 			Apply(appendODSetClauses).
 			Insert(); err != nil {
-			return errors.Wrap(err, "cannot insert players")
+			return errors.Wrap(err, "couldn't insert players")
 		}
 		if _, err := tx.Model(&models.Player{}).
 			Where("NOT (player.id = ANY (?))", pg.Array(ids)).
 			Set("exists = false").
 			Set("tribe_id = 0").
 			Update(); err != nil && err != pg.ErrNoRows {
-			return errors.Wrap(err, "cannot update nonexistent players")
+			return errors.Wrap(err, "couldn't update non-existent players")
 		}
 
-		playerHistory := []*models.PlayerHistory{}
+		var playerHistory []*models.PlayerHistory
 		if err := w.db.Model(&playerHistory).
 			DistinctOn("player_id").
 			Column("*").
 			Where("player_id = ANY (?)", pg.Array(ids)).
 			Order("player_id DESC", "create_date DESC").Select(); err != nil && err != pg.ErrNoRows {
-			return errors.Wrap(err, "cannot select player history records")
+			return errors.Wrap(err, "couldn't select player history records")
 		}
 		todaysPlayerStats := w.calculateDailyPlayerStats(players, playerHistory)
 		if len(todaysPlayerStats) > 0 {
@@ -271,17 +318,12 @@ func (w *updateServerDataWorker) update() error {
 				Set("rank = EXCLUDED.rank").
 				Apply(appendODSetClauses).
 				Insert(); err != nil {
-				return errors.Wrap(err, "cannot insert today's player stats")
+				return errors.Wrap(err, "couldn't insert today's player stats")
 			}
 		}
 	}
 
 	if len(villages) > 0 {
-		if _, err := tx.Model(&models.Village{}).
-			Where("true").
-			Delete(); err != nil && err != pg.ErrNoRows {
-			return errors.Wrap(err, "cannot delete villages")
-		}
 		if _, err := tx.Model(&villages).
 			OnConflict("(id) DO UPDATE").
 			Set("name = EXCLUDED.name").
@@ -291,7 +333,7 @@ func (w *updateServerDataWorker) update() error {
 			Set("bonus = EXCLUDED.bonus").
 			Set("player_id = EXCLUDED.player_id").
 			Insert(); err != nil {
-			return errors.Wrap(err, "cannot insert villages")
+			return errors.Wrap(err, "couldn't insert villages")
 		}
 	}
 
@@ -306,7 +348,7 @@ func (w *updateServerDataWorker) update() error {
 		Returning("*").
 		WherePK().
 		Update(); err != nil {
-		return errors.Wrap(err, "cannot update server")
+		return errors.Wrap(err, "couldn't update server")
 	}
 
 	if err := tx.Commit(); err != nil {

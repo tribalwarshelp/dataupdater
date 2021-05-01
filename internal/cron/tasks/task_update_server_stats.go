@@ -1,20 +1,59 @@
-package cron
+package tasks
 
 import (
-	"time"
-
 	"github.com/go-pg/pg/v10"
 	"github.com/pkg/errors"
 	"github.com/tribalwarshelp/shared/models"
+	"time"
 )
 
-type updateServerStatsWorker struct {
+type taskUpdateServerStats struct {
+	*task
+}
+
+func (t *taskUpdateServerStats) execute(timezone string, server *models.Server) error {
+	if err := t.validatePayload(server); err != nil {
+		log.Debug(err)
+		return nil
+	}
+	location, err := t.loadLocation(timezone)
+	if err != nil {
+		err = errors.Wrap(err, "taskUpdateServerStats.execute")
+		log.Error(err)
+		return err
+	}
+	entry := log.WithField("key", server.Key)
+	entry.Infof("taskUpdateServerStats.execute: %s: update of the stats has started...", server.Key)
+	err = (&workerUpdateServerStats{
+		db:       t.db.WithParam("SERVER", pg.Safe(server.Key)),
+		server:   server,
+		location: location,
+	}).update()
+	if err != nil {
+		err = errors.Wrap(err, "taskUpdateServerStats.execute")
+		entry.Error(err)
+		return err
+	}
+	entry.Infof("taskUpdateServerStats.execute: %s: stats have been updated", server.Key)
+
+	return nil
+}
+
+func (t *taskUpdateServerStats) validatePayload(server *models.Server) error {
+	if server == nil {
+		return errors.New("taskUpdateServerStats.validatePayload: Expected *models.Server, got nil")
+	}
+
+	return nil
+}
+
+type workerUpdateServerStats struct {
 	db       *pg.DB
 	server   *models.Server
 	location *time.Location
 }
 
-func (w *updateServerStatsWorker) prepare() (*models.ServerStats, error) {
+func (w *workerUpdateServerStats) prepare() (*models.ServerStats, error) {
 	activePlayers, err := w.db.Model(&models.Player{}).Where("exists = true").Count()
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot count active players")
@@ -71,7 +110,7 @@ func (w *updateServerStatsWorker) prepare() (*models.ServerStats, error) {
 	}, nil
 }
 
-func (w *updateServerStatsWorker) update() error {
+func (w *workerUpdateServerStats) update() error {
 	stats, err := w.prepare()
 	if err != nil {
 		return err
@@ -81,10 +120,14 @@ func (w *updateServerStatsWorker) update() error {
 	if err != nil {
 		return err
 	}
-	defer tx.Close()
+	defer func(s *models.Server) {
+		if err := tx.Close(); err != nil {
+			log.Warn(errors.Wrapf(err, "%s: Couldn't rollback the transaction", s.Key))
+		}
+	}(w.server)
 
 	if _, err := tx.Model(stats).Insert(); err != nil {
-		return errors.Wrap(err, "cannot insert server stats")
+		return errors.Wrap(err, "couldn't insert server stats")
 	}
 
 	_, err = tx.Model(w.server).
@@ -93,7 +136,7 @@ func (w *updateServerStatsWorker) update() error {
 		Returning("*").
 		Update()
 	if err != nil {
-		return errors.Wrap(err, "cannot update server")
+		return errors.Wrap(err, "couldn't update the server")
 	}
 
 	return tx.Commit()
