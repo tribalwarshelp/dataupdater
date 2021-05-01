@@ -99,18 +99,6 @@ type searchableByID interface {
 	len() int
 }
 
-func makePlayersSearchable(players []*models.Player) searchableByID {
-	return playersSearchableByID{
-		players: players,
-	}
-}
-
-func makeTribesSearchable(tribes []*models.Tribe) searchableByID {
-	return tribesSearchableByID{
-		tribes: tribes,
-	}
-}
-
 func searchByID(haystack searchableByID, id int) int {
 	low := 0
 	high := haystack.len() - 1
