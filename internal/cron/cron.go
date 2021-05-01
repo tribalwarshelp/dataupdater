@@ -74,19 +74,19 @@ func (c *Cron) init() error {
 	if _, err := c.AddFunc("10 1 * * *", c.deleteNonExistentVillages); err != nil {
 		return err
 	}
-	//if _, err := c.AddFunc("@every 1m", c.updateEnnoblements); err != nil {
-	//	return err
-	//}
+	if _, err := c.AddFunc("@every 1m", c.updateEnnoblements); err != nil {
+		return err
+	}
 	if c.runOnInit {
 		go func() {
 			c.updateServerData()
-			//c.vacuumDatabase()
-			//for _, fn := range updateHistoryFuncs {
-			//	fn()
-			//}
-			//for _, fn := range updateStatsFuncs {
-			//	fn()
-			//}
+			c.vacuumDatabase()
+			for _, fn := range updateHistoryFuncs {
+				fn()
+			}
+			for _, fn := range updateStatsFuncs {
+				fn()
+			}
 		}()
 	}
 	return nil
