@@ -277,7 +277,9 @@ func (w *workerUpdateServerData) update() error {
 		return errors.Wrap(err, "workerUpdateServerData.update")
 	}
 
-	return w.db.RunInTransaction(context.Background(), func(tx *pg.Tx) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	return w.db.RunInTransaction(ctx, func(tx *pg.Tx) error {
 		if len(tribesResult.deletedTribes) > 0 {
 			if _, err := tx.Model(&models.Tribe{}).
 				Where("tribe.id  = ANY (?)", pg.Array(tribesResult.deletedTribes)).
