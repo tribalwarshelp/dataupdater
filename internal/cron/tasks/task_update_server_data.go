@@ -43,7 +43,7 @@ func (t *taskUpdateServerData) execute(url string, server *models.Server) error 
 
 func (t *taskUpdateServerData) validatePayload(server *models.Server) error {
 	if server == nil {
-		return errors.Errorf("taskUpdateServerData.validatePayload: Expected *models.Server, got nil")
+		return errors.New("taskUpdateServerData.validatePayload: Expected *models.Server, got nil")
 	}
 
 	return nil
@@ -56,7 +56,7 @@ type workerUpdateServerData struct {
 }
 
 func (w *workerUpdateServerData) loadPlayers(od map[int]*models.OpponentsDefeated) ([]*models.Player, error) {
-	var ennoblements = []*models.Ennoblement{}
+	var ennoblements []*models.Ennoblement
 	err := w.db.Model(&ennoblements).DistinctOn("new_owner_id").Order("new_owner_id ASC", "ennobled_at ASC").Select()
 	if err != nil {
 		return nil, errors.Wrap(err, "workerUpdateServerData.loadPlayers: couldn't load ennoblements")
@@ -145,7 +145,7 @@ func (w *workerUpdateServerData) calculateTodaysTribeStats(
 
 func (w *workerUpdateServerData) calculateDailyPlayerStats(players []*models.Player,
 	history []*models.PlayerHistory) []*models.DailyPlayerStats {
-	todaysStats := []*models.DailyPlayerStats{}
+	var todaysStats []*models.DailyPlayerStats
 	searchablePlayers := makePlayersSearchable(players)
 
 	for _, historyRecord := range history {
@@ -168,42 +168,45 @@ func (w *workerUpdateServerData) calculateDailyPlayerStats(players []*models.Pla
 func (w *workerUpdateServerData) update() error {
 	pod, err := w.dataloader.LoadOD(false)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "workerUpdateServerData.update")
 	}
+
 	tod, err := w.dataloader.LoadOD(true)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "workerUpdateServerData.update")
 	}
 
 	villages, err := w.dataloader.LoadVillages()
 	if err != nil {
-		return err
+		return errors.Wrap(err, "workerUpdateServerData.update")
 	}
 	numberOfVillages := len(villages)
 
 	tribes, err := w.loadTribes(tod, countPlayerVillages(villages))
 	if err != nil {
-		return err
+		return errors.Wrap(err, "workerUpdateServerData.update")
 	}
 	numberOfTribes := len(tribes)
 
 	players, err := w.loadPlayers(pod)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "workerUpdateServerData.update")
 	}
 	numberOfPlayers := len(players)
 
 	cfg, err := w.dataloader.GetConfig()
 	if err != nil {
-		return err
+		return errors.Wrap(err, "workerUpdateServerData.update")
 	}
+
 	buildingCfg, err := w.dataloader.GetBuildingConfig()
 	if err != nil {
-		return err
+		return errors.Wrap(err, "workerUpdateServerData.update")
 	}
+
 	unitCfg, err := w.dataloader.GetUnitConfig()
 	if err != nil {
-		return err
+		return errors.Wrap(err, "workerUpdateServerData.update")
 	}
 
 	tx, err := w.db.Begin()
@@ -217,7 +220,7 @@ func (w *workerUpdateServerData) update() error {
 	}(w.server)
 
 	if len(tribes) > 0 {
-		ids := []int{}
+		var ids []int
 		for _, tribe := range tribes {
 			ids = append(ids, tribe.ID)
 		}
@@ -244,7 +247,7 @@ func (w *workerUpdateServerData) update() error {
 			return errors.Wrap(err, "couldn't update non-existent tribes")
 		}
 
-		tribesHistory := []*models.TribeHistory{}
+		var tribesHistory []*models.TribeHistory
 		if err := w.db.Model(&tribesHistory).
 			DistinctOn("tribe_id").
 			Column("*").
@@ -272,7 +275,7 @@ func (w *workerUpdateServerData) update() error {
 	}
 
 	if len(players) > 0 {
-		ids := []int{}
+		var ids []int
 		for _, player := range players {
 			ids = append(ids, player.ID)
 		}
@@ -297,7 +300,7 @@ func (w *workerUpdateServerData) update() error {
 			return errors.Wrap(err, "couldn't update non-existent players")
 		}
 
-		playerHistory := []*models.PlayerHistory{}
+		var playerHistory []*models.PlayerHistory
 		if err := w.db.Model(&playerHistory).
 			DistinctOn("player_id").
 			Column("*").

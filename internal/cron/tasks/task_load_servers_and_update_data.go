@@ -89,7 +89,7 @@ func (t *taskLoadServersAndUpdateData) execute(version *models.Version) error {
 
 func (t *taskLoadServersAndUpdateData) validatePayload(version *models.Version) error {
 	if version == nil {
-		return errors.Errorf("taskLoadServersAndUpdateData.validatePayload: Expected *models.Version, got nil")
+		return errors.New("taskLoadServersAndUpdateData.validatePayload: Expected *models.Version, got nil")
 	}
 	return nil
 }

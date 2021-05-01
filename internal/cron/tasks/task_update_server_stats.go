@@ -41,7 +41,7 @@ func (t *taskUpdateServerStats) execute(timezone string, server *models.Server) 
 
 func (t *taskUpdateServerStats) validatePayload(server *models.Server) error {
 	if server == nil {
-		return errors.Errorf("taskUpdateServerStats.validatePayload: Expected *models.Server, got nil")
+		return errors.New("taskUpdateServerStats.validatePayload: Expected *models.Server, got nil")
 	}
 
 	return nil

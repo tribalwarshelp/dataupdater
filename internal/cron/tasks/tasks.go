@@ -92,6 +92,10 @@ func RegisterTasks(cfg *Config) error {
 			Name:    TaskNameDeleteNonExistentVillages,
 			Handler: (&taskDeleteNonExistentVillages{t}).execute,
 		},
+		{
+			Name:    TaskNameServerDeleteNonExistentVillages,
+			Handler: (&taskServerDeleteNonExistentVillages{t}).execute,
+		},
 	}
 	for _, taskOptions := range options {
 		opts := taskOptions

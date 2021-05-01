@@ -38,7 +38,7 @@ func (t *taskVacuumServerDB) execute(server *models.Server) error {
 
 func (t *taskVacuumServerDB) validatePayload(server *models.Server) error {
 	if server == nil {
-		return errors.Errorf("taskVacuumServerDB.validatePayload: Expected *models.Server, got nil")
+		return errors.New("taskVacuumServerDB.validatePayload: Expected *models.Server, got nil")
 	}
 
 	return nil

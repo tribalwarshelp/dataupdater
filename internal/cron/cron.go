@@ -71,6 +71,9 @@ func (c *Cron) init() error {
 	if _, err := c.AddFunc("20 1 * * *", c.vacuumDatabase); err != nil {
 		return err
 	}
+	if _, err := c.AddFunc("10 1 * * *", c.deleteNonExistentVillages); err != nil {
+		return err
+	}
 	if _, err := c.AddFunc("@every 1m", c.updateEnnoblements); err != nil {
 		return err
 	}
@@ -79,10 +82,10 @@ func (c *Cron) init() error {
 			c.updateServerData()
 			c.vacuumDatabase()
 			for _, fn := range updateHistoryFuncs {
-				go fn()
+				fn()
 			}
 			for _, fn := range updateStatsFuncs {
-				go fn()
+				fn()
 			}
 		}()
 	}
@@ -137,6 +140,13 @@ func (c *Cron) vacuumDatabase() {
 	err := c.queue.Add(queue.MainQueue, tasks.Get(tasks.TaskNameVacuum).WithArgs(context.Background()))
 	if err != nil {
 		c.logError("Cron.vacuumDatabase", tasks.TaskNameVacuum, err)
+	}
+}
+
+func (c *Cron) deleteNonExistentVillages() {
+	err := c.queue.Add(queue.MainQueue, tasks.Get(tasks.TaskNameDeleteNonExistentVillages).WithArgs(context.Background()))
+	if err != nil {
+		c.logError("Cron.deleteNonExistentVillages", tasks.TaskNameDeleteNonExistentVillages, err)
 	}
 }
 

@@ -46,45 +46,57 @@ func newDataloader(url string) dataloader.DataLoader {
 	})
 }
 
-type tribesSearchableByID struct {
-	tribes []*models.Tribe
-}
-
-func (searchable tribesSearchableByID) GetID(index int) int {
-	return searchable.tribes[index].ID
-}
-
-func (searchable tribesSearchableByID) Len() int {
-	return len(searchable.tribes)
-}
-
 type playersSearchableByID struct {
 	players []*models.Player
 }
 
-func (searchable playersSearchableByID) GetID(index int) int {
+func (searchable playersSearchableByID) getID(index int) int {
 	return searchable.players[index].ID
 }
 
-func (searchable playersSearchableByID) Len() int {
+func (searchable playersSearchableByID) len() int {
 	return len(searchable.players)
+}
+
+type tribesSearchableByID struct {
+	tribes []*models.Tribe
+}
+
+func (searchable tribesSearchableByID) getID(index int) int {
+	return searchable.tribes[index].ID
+}
+
+func (searchable tribesSearchableByID) len() int {
+	return len(searchable.tribes)
+}
+
+type villagesSearchableByID struct {
+	villages []*models.Village
+}
+
+func (searchable villagesSearchableByID) getID(index int) int {
+	return searchable.villages[index].ID
+}
+
+func (searchable villagesSearchableByID) len() int {
+	return len(searchable.villages)
 }
 
 type ennoblementsSearchableByNewOwnerID struct {
 	ennoblements []*models.Ennoblement
 }
 
-func (searchable ennoblementsSearchableByNewOwnerID) GetID(index int) int {
+func (searchable ennoblementsSearchableByNewOwnerID) getID(index int) int {
 	return searchable.ennoblements[index].NewOwnerID
 }
 
-func (searchable ennoblementsSearchableByNewOwnerID) Len() int {
+func (searchable ennoblementsSearchableByNewOwnerID) len() int {
 	return len(searchable.ennoblements)
 }
 
 type searchableByID interface {
-	GetID(index int) int
-	Len() int
+	getID(index int) int
+	len() int
 }
 
 func makePlayersSearchable(players []*models.Player) searchableByID {
@@ -101,19 +113,19 @@ func makeTribesSearchable(tribes []*models.Tribe) searchableByID {
 
 func searchByID(haystack searchableByID, id int) int {
 	low := 0
-	high := haystack.Len() - 1
+	high := haystack.len() - 1
 
 	for low <= high {
 		median := (low + high) / 2
 
-		if haystack.GetID(median) < id {
+		if haystack.getID(median) < id {
 			low = median + 1
 		} else {
 			high = median - 1
 		}
 	}
 
-	if low == haystack.Len() || haystack.GetID(low) != id {
+	if low == haystack.len() || haystack.getID(low) != id {
 		return -1
 	}
 
