@@ -56,41 +56,72 @@ type workerUpdateServerData struct {
 	server     *models.Server
 }
 
-func (w *workerUpdateServerData) loadPlayers(od map[int]*models.OpponentsDefeated) ([]*models.Player, []*models.PlayerToServer, error) {
+type loadPlayersResult struct {
+	ids             []int
+	players         []*models.Player
+	playersToServer []*models.PlayerToServer
+	deletedPlayers  []int
+	numberOfPlayers int
+}
+
+func (w *workerUpdateServerData) loadPlayers(od map[int]*models.OpponentsDefeated) (loadPlayersResult, error) {
 	var ennoblements []*models.Ennoblement
+	result := loadPlayersResult{}
 	if err := w.db.
 		Model(&ennoblements).
 		DistinctOn("new_owner_id").
 		Order("new_owner_id ASC", "ennobled_at ASC").
 		Select(); err != nil {
-		return nil, nil, errors.Wrap(err, "workerUpdateServerData.loadPlayers: couldn't load ennoblements")
+		return result, errors.Wrap(err, "workerUpdateServerData.loadPlayers: couldn't load ennoblements")
 	}
 
-	players, err := w.dataloader.LoadPlayers()
+	var err error
+	result.players, err = w.dataloader.LoadPlayers()
 	if err != nil {
-		return nil, nil, err
+		return result, err
 	}
+	result.numberOfPlayers = len(result.players)
 
 	now := time.Now()
-	playersToServer := make([]*models.PlayerToServer, len(players))
-	searchableByNewOwnerID := &ennoblementsSearchableByNewOwnerID{ennoblements: ennoblements}
-	for index, player := range players {
+	result.playersToServer = make([]*models.PlayerToServer, result.numberOfPlayers)
+	result.ids = make([]int, result.numberOfPlayers)
+	searchableByNewOwnerID := &ennoblementsSearchableByNewOwnerID{ennoblements}
+	for index, player := range result.players {
 		playerOD, ok := od[player.ID]
 		if ok {
 			player.OpponentsDefeated = *playerOD
 		}
+
 		firstEnnoblementIndex := searchByID(searchableByNewOwnerID, player.ID)
-		if firstEnnoblementIndex != -1 {
+		if firstEnnoblementIndex >= 0 {
 			firstEnnoblement := ennoblements[firstEnnoblementIndex]
 			diffInDays := getDateDifferenceInDays(now, firstEnnoblement.EnnobledAt)
 			player.DailyGrowth = calcPlayerDailyGrowth(diffInDays, player.Points)
 		}
-		playersToServer[index] = &models.PlayerToServer{
+
+		result.playersToServer[index] = &models.PlayerToServer{
 			PlayerID:  player.ID,
 			ServerKey: w.server.Key,
 		}
+
+		result.ids[index] = player.ID
 	}
-	return players, nil, nil
+
+	searchableNewPlayers := &playersSearchableByID{result.players}
+	if err := w.db.
+		Model(&models.Player{}).
+		Column("id").
+		Where("exists = true").
+		ForEach(func(player *models.Player) error {
+			if index := searchByID(searchableNewPlayers, player.ID); index < 0 {
+				result.deletedPlayers = append(result.deletedPlayers, player.ID)
+			}
+			return nil
+		}); err != nil {
+		return result, errors.Wrap(err, "workerUpdateServerData.loadPlayers: Players that have been deleted couldn't be detected")
+	}
+
+	return result, nil
 }
 
 func (w *workerUpdateServerData) loadTribes(od map[int]*models.OpponentsDefeated, numberOfVillages int) ([]*models.Tribe, error) {
@@ -197,11 +228,10 @@ func (w *workerUpdateServerData) update() error {
 	}
 	numberOfTribes := len(tribes)
 
-	players, playersToServer, err := w.loadPlayers(pod)
+	playersResult, err := w.loadPlayers(pod)
 	if err != nil {
 		return errors.Wrap(err, "workerUpdateServerData.update")
 	}
-	numberOfPlayers := len(players)
 
 	cfg, err := w.dataloader.GetConfig()
 	if err != nil {
@@ -220,9 +250,9 @@ func (w *workerUpdateServerData) update() error {
 
 	return w.db.RunInTransaction(context.Background(), func(tx *pg.Tx) error {
 		if len(tribes) > 0 {
-			var ids []int
-			for _, tribe := range tribes {
-				ids = append(ids, tribe.ID)
+			ids := make([]int, len(tribes))
+			for index, tribe := range tribes {
+				ids[index] = tribe.ID
 			}
 
 			if _, err := tx.Model(&tribes).
@@ -236,6 +266,7 @@ func (w *workerUpdateServerData) update() error {
 				Set("rank = EXCLUDED.rank").
 				Set("exists = EXCLUDED.exists").
 				Set("dominance = EXCLUDED.dominance").
+				Set("deleted_at = null").
 				Apply(appendODSetClauses).
 				Insert(); err != nil {
 				return errors.Wrap(err, "couldn't insert tribes")
@@ -243,16 +274,20 @@ func (w *workerUpdateServerData) update() error {
 			if _, err := tx.Model(&tribes).
 				Where("NOT (tribe.id  = ANY (?))", pg.Array(ids)).
 				Set("exists = false").
+				Set("deleted_at = now()").
+				Set("dominance = 0").
 				Update(); err != nil && err != pg.ErrNoRows {
 				return errors.Wrap(err, "couldn't update non-existent tribes")
 			}
 
 			var tribesHistory []*models.TribeHistory
-			if err := w.db.Model(&tribesHistory).
+			if err := tx.
+				Model(&tribesHistory).
 				DistinctOn("tribe_id").
-				Column("*").
-				Where("tribe_id = ANY (?)", pg.Array(ids)).
+				Column("tribe_history.*").
+				Where("tribe.exists = true").
 				Order("tribe_id DESC", "create_date DESC").
+				Relation("Tribe._").
 				Select(); err != nil && err != pg.ErrNoRows {
 				return errors.Wrap(err, "couldn't select tribe history records")
 			}
@@ -274,12 +309,18 @@ func (w *workerUpdateServerData) update() error {
 			}
 		}
 
-		if len(players) > 0 {
-			var ids []int
-			for _, player := range players {
-				ids = append(ids, player.ID)
+		if len(playersResult.deletedPlayers) > 0 {
+			if _, err := tx.Model(&models.Player{}).
+				Where("player.id = ANY (?)", pg.Array(playersResult.deletedPlayers)).
+				Set("exists = false").
+				Set("tribe_id = 0").
+				Update(); err != nil && err != pg.ErrNoRows {
+				return errors.Wrap(err, "couldn't mark players as deleted")
 			}
-			if _, err := tx.Model(&players).
+		}
+
+		if playersResult.numberOfPlayers > 0 {
+			if _, err := tx.Model(&playersResult.players).
 				OnConflict("(id) DO UPDATE").
 				Set("name = EXCLUDED.name").
 				Set("total_villages = EXCLUDED.total_villages").
@@ -288,32 +329,22 @@ func (w *workerUpdateServerData) update() error {
 				Set("exists = EXCLUDED.exists").
 				Set("tribe_id = EXCLUDED.tribe_id").
 				Set("daily_growth = EXCLUDED.daily_growth").
+				Set("deleted_at = null").
 				Apply(appendODSetClauses).
 				Insert(); err != nil {
 				return errors.Wrap(err, "couldn't insert players")
 			}
-			if _, err := tx.Model(&models.Player{}).
-				Where("NOT (player.id = ANY (?))", pg.Array(ids)).
-				Set("exists = false").
-				Set("tribe_id = 0").
-				Update(); err != nil && err != pg.ErrNoRows {
-				return errors.Wrap(err, "couldn't update non-existent players")
-			}
-			if len(playersToServer) > 0 {
-				if _, err := tx.Model(&playersToServer).OnConflict("DO NOTHING").Insert(); err != nil {
-					return errors.Wrap(err, "couldn't associate players with the server")
-				}
-			}
 
 			var playerHistory []*models.PlayerHistory
-			if err := w.db.Model(&playerHistory).
+			if err := tx.Model(&playerHistory).
 				DistinctOn("player_id").
-				Column("*").
-				Where("player_id = ANY (?)", pg.Array(ids)).
+				Column("player_history.*").
+				Where("player.exists = true").
+				Relation("Player._").
 				Order("player_id DESC", "create_date DESC").Select(); err != nil && err != pg.ErrNoRows {
 				return errors.Wrap(err, "couldn't select player history records")
 			}
-			todaysPlayerStats := w.calculateDailyPlayerStats(players, playerHistory)
+			todaysPlayerStats := w.calculateDailyPlayerStats(playersResult.players, playerHistory)
 			if len(todaysPlayerStats) > 0 {
 				if _, err := tx.
 					Model(&todaysPlayerStats).
@@ -328,8 +359,14 @@ func (w *workerUpdateServerData) update() error {
 			}
 		}
 
+		if len(playersResult.playersToServer) > 0 {
+			if _, err := tx.Model(&playersResult.playersToServer).OnConflict("DO NOTHING").Insert(); err != nil {
+				return errors.Wrap(err, "couldn't associate players with the server")
+			}
+		}
+
 		if len(villages) > 0 {
-			if _, err := w.db.Model(&villages).
+			if _, err := tx.Model(&villages).
 				OnConflict("(id) DO UPDATE").
 				Set("name = EXCLUDED.name").
 				Set("points = EXCLUDED.points").
@@ -347,7 +384,7 @@ func (w *workerUpdateServerData) update() error {
 			Set("unit_config = ?", unitCfg).
 			Set("building_config = ?", buildingCfg).
 			Set("config = ?", cfg).
-			Set("number_of_players = ?", numberOfPlayers).
+			Set("number_of_players = ?", playersResult.numberOfPlayers).
 			Set("number_of_tribes = ?", numberOfTribes).
 			Set("number_of_villages = ?", numberOfVillages).
 			Returning("*").
