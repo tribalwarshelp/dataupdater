@@ -210,19 +210,6 @@ const (
 		END;
 		$BODY$
 		LANGUAGE plpgsql VOLATILE;
-
-		CREATE OR REPLACE FUNCTION ?0.insert_into_player_to_servers()
-			RETURNS trigger AS
-		$BODY$
-		BEGIN
-			INSERT INTO player_to_servers(server_key,player_id)
-				VALUES('?0', NEW.id)
-				ON CONFLICT DO NOTHING;
-
-			RETURN NEW;
-		END;
-		$BODY$
-		LANGUAGE plpgsql;
 	`
 	serverPGTriggers = `
 		CREATE TRIGGER ?0_log_tribe_change_on_insert
@@ -273,11 +260,7 @@ const (
 			FOR EACH ROW
 			EXECUTE PROCEDURE ?0.get_old_and_new_owner_tribe_id();
 
-		CREATE TRIGGER ?0_insert_into_player_to_servers
-			AFTER INSERT
-			ON ?0.players
-			FOR EACH ROW
-			EXECUTE PROCEDURE ?0.insert_into_player_to_servers();
+		DROP TRIGGER IF EXISTS ?0_insert_into_player_to_servers ON ?0.players;
 
 		CREATE TRIGGER ?0_update_most_points_most_villages_best_rank_last_activity
 			BEFORE INSERT OR UPDATE
