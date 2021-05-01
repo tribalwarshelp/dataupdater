@@ -45,14 +45,16 @@ func (t *taskUpdateStats) execute(timezone string) error {
 	for _, server := range servers {
 		s := server
 		err := t.queue.Add(queue.MainQueue, Get(TaskUpdateServerStats).WithArgs(context.Background(), timezone, s))
-		log.Warn(
-			errors.Wrapf(
-				err,
-				"taskUpdateStats.execute: %s: Couldn't add the task '%s' for this server",
-				server.Key,
-				TaskUpdateServerStats,
-			),
-		)
+		if err != nil {
+			log.Warn(
+				errors.Wrapf(
+					err,
+					"taskUpdateStats.execute: %s: Couldn't add the task '%s' for this server",
+					server.Key,
+					TaskUpdateServerStats,
+				),
+			)
+		}
 	}
 	return nil
 }

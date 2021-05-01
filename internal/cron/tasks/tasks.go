@@ -21,6 +21,8 @@ const (
 	TaskUpdateServerHistory                 = "updateServerHistory"
 	TaskUpdateStats                         = "updateStats"
 	TaskUpdateServerStats                   = "updateServerStats"
+	TaskNameDeleteNonExistentVillages       = "deleteNonExistentVillages"
+	TaskNameServerDeleteNonExistentVillages = "serverDeleteNonExistentVillages"
 	defaultRetryLimit                       = 3
 )
 
@@ -85,6 +87,10 @@ func RegisterTasks(cfg *Config) error {
 		{
 			Name:    TaskUpdateServerStats,
 			Handler: (&taskUpdateServerStats{t}).execute,
+		},
+		{
+			Name:    TaskNameDeleteNonExistentVillages,
+			Handler: (&taskDeleteNonExistentVillages{t}).execute,
 		},
 	}
 	for _, taskOptions := range options {

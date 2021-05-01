@@ -127,7 +127,7 @@ func (w *workerUpdateServerStats) update() error {
 	}(w.server)
 
 	if _, err := tx.Model(stats).Insert(); err != nil {
-		return errors.Wrap(err, "cannot insert server stats")
+		return errors.Wrap(err, "couldn't insert server stats")
 	}
 
 	_, err = tx.Model(w.server).
@@ -136,7 +136,7 @@ func (w *workerUpdateServerStats) update() error {
 		Returning("*").
 		Update()
 	if err != nil {
-		return errors.Wrap(err, "cannot update server")
+		return errors.Wrap(err, "couldn't update the server")
 	}
 
 	return tx.Commit()

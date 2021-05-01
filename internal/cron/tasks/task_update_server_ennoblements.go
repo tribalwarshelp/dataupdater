@@ -27,7 +27,7 @@ func (t *taskUpdateServerEnnoblements) execute(url string, server *models.Server
 		entry.Error(err)
 		return err
 	}
-	entry.Debugf("%s: ennoblements has been updated", server.Key)
+	entry.Debugf("%s: ennoblements have been updated", server.Key)
 
 	return nil
 }
