@@ -2,8 +2,6 @@ cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMT
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
-github.com/Kichiyaki/go-pg-logrus-query-logger/v10 v10.0.0-20210423175217-c83fa01c60d7 h1:7IdSzhdupqm4AC3UDH9b5gdCDE2SlX6qkVC0zwqAuLA=
-github.com/Kichiyaki/go-pg-logrus-query-logger/v10 v10.0.0-20210423175217-c83fa01c60d7/go.mod h1:ADHVWnGlWcRn1aGthuh7I1Lrn6zzsjkVJju151dXyDw=
 github.com/Kichiyaki/go-pg-logrus-query-logger/v10 v10.0.0-20210428180109-fb97298564d9 h1:S/08K0AD4bXYeSPJKei8ZbumDy1JNARZsgYbNZgr9Tk=
 github.com/Kichiyaki/go-pg-logrus-query-logger/v10 v10.0.0-20210428180109-fb97298564d9/go.mod h1:ADHVWnGlWcRn1aGthuh7I1Lrn6zzsjkVJju151dXyDw=
 github.com/Kichiyaki/go-php-serialize v0.0.0-20200601110855-47b6982acf83 h1:Oa8Bk4LNcknxw50gZOlvPwEreOlAbOnu7V82lUYNbOM=
