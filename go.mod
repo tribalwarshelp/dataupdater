@@ -13,7 +13,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/sirupsen/logrus v1.8.1
-	github.com/tribalwarshelp/shared v0.0.0-20210501144726-b8f533bc97be
+	github.com/tribalwarshelp/shared v0.0.0-20210502140609-e137bd656c94
 	github.com/vmihailenco/taskq/v3 v3.2.3
 	golang.org/x/sys v0.0.0-20210423185535-09eb48e85fd7 // indirect
 )

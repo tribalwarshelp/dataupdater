@@ -6,6 +6,8 @@ github.com/Kichiyaki/go-pg-logrus-query-logger/v10 v10.0.0-20210428180109-fb9729
 github.com/Kichiyaki/go-pg-logrus-query-logger/v10 v10.0.0-20210428180109-fb97298564d9/go.mod h1:ADHVWnGlWcRn1aGthuh7I1Lrn6zzsjkVJju151dXyDw=
 github.com/Kichiyaki/go-php-serialize v0.0.0-20200601110855-47b6982acf83 h1:Oa8Bk4LNcknxw50gZOlvPwEreOlAbOnu7V82lUYNbOM=
 github.com/Kichiyaki/go-php-serialize v0.0.0-20200601110855-47b6982acf83/go.mod h1:+iGkf5HfOVeRVd9K7qQDucIl+/Kt3MyenMa90b/O/c4=
+github.com/Kichiyaki/gopgutil/v10 v10.0.0-20210502140321-8b7f2b75ad67/go.mod h1:Q3QaLlZY3/FcqwmTpdYqoAAGCmPYzrL7hCL7e5kzmjQ=
+github.com/Kichiyaki/goutil v0.0.0-20210502135617-7868852b90cc/go.mod h1:+HhI932Xb0xrCodNcCv5GPiCjLYhDxWhCtlEqMIJhB4=
 github.com/aws/aws-sdk-go v1.35.28 h1:S2LuRnfC8X05zgZLC8gy/Sb82TGv2Cpytzbzz7tkeHc=
 github.com/aws/aws-sdk-go v1.35.28/go.mod h1:tlPOdRjfxPBpNIwqDj61rmsnA85v9jc0Ps9+muhnW+k=
 github.com/bsm/redislock v0.7.0 h1:RL7aZJhCKkuBjQbnSTKCeedTRifBWxd/ffP+GZ599Mo=
@@ -124,6 +126,8 @@ github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc h1:9lRDQMhESg+zvGYm
 github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc/go.mod h1:bciPuU6GHm1iF1pBvUfxfsH0Wmnc2VbpgvbI9ZWuIRs=
 github.com/tribalwarshelp/shared v0.0.0-20210501144726-b8f533bc97be h1:NSdGqXTiWYk67US87sqE8sHlGEsL/dLIfQpb0jDPbTI=
 github.com/tribalwarshelp/shared v0.0.0-20210501144726-b8f533bc97be/go.mod h1:CDQvesBYmSyGDl5X37xfa+ub55ZbikrHDuIZ4AcfM8I=
+github.com/tribalwarshelp/shared v0.0.0-20210502140609-e137bd656c94 h1:tQysqj1zlVBLFiRqVYRlRd4hPg5EBKGwYav7+gjxQMo=
+github.com/tribalwarshelp/shared v0.0.0-20210502140609-e137bd656c94/go.mod h1:NDNw8pZ/lbNaORVwGWl22+Czf4pwtwXELR2ExeUn0q0=
 github.com/vmihailenco/bufpool v0.1.11 h1:gOq2WmBrq0i2yW5QJ16ykccQ4wH9UyEsgLm6czKAd94=
 github.com/vmihailenco/bufpool v0.1.11/go.mod h1:AFf/MOy3l2CFTKbxwt0mp2MwnqjNEs5H/UxrkA5jxTQ=
 github.com/vmihailenco/msgpack/v5 v5.0.0/go.mod h1:HVxBVPUK/+fZMonk4bi1islLa8V3cfnBug0+4dykPzo=
