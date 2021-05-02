@@ -342,6 +342,7 @@ func (w *workerUpdateServerData) update() error {
 			if _, err := tx.Model(&models.Player{}).
 				Where("player.id = ANY (?)", pg.Array(playersResult.deletedPlayers)).
 				Set("exists = false").
+				Set("deleted_at = now()").
 				Set("tribe_id = 0").
 				Update(); err != nil && err != pg.ErrNoRows {
 				return errors.Wrap(err, "couldn't mark players as deleted")
