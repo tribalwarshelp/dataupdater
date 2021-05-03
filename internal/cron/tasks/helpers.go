@@ -39,7 +39,7 @@ func newHTTPClient() *http.Client {
 }
 
 func newServerDataLoader(url string) twdataloader.ServerDataLoader {
-	return twdataloader.NewServerDataLoader(&twdataloader.Config{
+	return twdataloader.NewServerDataLoader(&twdataloader.ServerDataLoaderConfig{
 		BaseURL: url,
 		Client:  newHTTPClient(),
 	})

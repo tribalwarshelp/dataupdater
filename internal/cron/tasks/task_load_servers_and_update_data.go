@@ -2,25 +2,23 @@ package tasks
 
 import (
 	"context"
-	"fmt"
-	phpserialize "github.com/Kichiyaki/go-php-serialize"
 	"github.com/go-pg/pg/v10"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"github.com/tribalwarshelp/shared/tw/twdataloader"
 	"github.com/tribalwarshelp/shared/tw/twmodel"
-	"io/ioutil"
-	"net/http"
 
 	"github.com/tribalwarshelp/cron/internal/cron/queue"
 	"github.com/tribalwarshelp/cron/internal/postgres"
 )
 
-const (
-	endpointGetServers = "/backend/get_servers.php"
-)
-
 type taskLoadServersAndUpdateData struct {
 	*task
+}
+
+type serverWithURL struct {
+	*twmodel.Server `pg:",inherit"`
+	url             string
 }
 
 func (t *taskLoadServersAndUpdateData) execute(version *twmodel.Version) error {
@@ -30,20 +28,25 @@ func (t *taskLoadServersAndUpdateData) execute(version *twmodel.Version) error {
 	}
 	entry := log.WithField("host", version.Host)
 	entry.Infof("taskLoadServersAndUpdateData.execute: %s: Loading servers", version.Host)
-	data, err := t.getServers(version)
+	loadedServers, err := twdataloader.
+		NewVersionDataLoader(&twdataloader.VersionDataLoaderConfig{
+			Host:   version.Host,
+			Client: newHTTPClient(),
+		}).
+		LoadServers()
 	if err != nil {
 		log.Errorln(err)
 		return err
 	}
 
 	var serverKeys []string
-	var servers []*twmodel.Server
-	for serverKey := range data {
-		if version.SpecialServers.Contains(serverKey) {
+	var servers []*serverWithURL
+	for _, loadedServer := range loadedServers {
+		if version.SpecialServers.Contains(loadedServer.Key) {
 			continue
 		}
 		server := &twmodel.Server{
-			Key:         serverKey,
+			Key:         loadedServer.Key,
 			Status:      twmodel.ServerStatusOpen,
 			VersionCode: version.Code,
 			Version:     version,
@@ -52,8 +55,11 @@ func (t *taskLoadServersAndUpdateData) execute(version *twmodel.Version) error {
 			logrus.Warn(errors.Wrapf(err, "taskLoadServersAndUpdateData.execute: %s: couldn't create the schema", server.Key))
 			continue
 		}
-		servers = append(servers, server)
-		serverKeys = append(serverKeys, serverKey)
+		servers = append(servers, &serverWithURL{
+			Server: server,
+			url:    loadedServer.URL,
+		})
+		serverKeys = append(serverKeys, server.Key)
 	}
 
 	if len(servers) > 0 {
@@ -79,8 +85,7 @@ func (t *taskLoadServersAndUpdateData) execute(version *twmodel.Version) error {
 	}
 
 	for _, server := range servers {
-		s := server
-		t.queue.Add(queue.MainQueue, Get(TaskNameUpdateServerData).WithArgs(context.Background(), data[s.Key], s))
+		t.queue.Add(queue.MainQueue, Get(TaskNameUpdateServerData).WithArgs(context.Background(), server.url, server.Server))
 	}
 
 	entry.Infof("%s: Servers have been loaded", version.Host)
@@ -92,31 +97,4 @@ func (t *taskLoadServersAndUpdateData) validatePayload(version *twmodel.Version)
 		return errors.New("taskLoadServersAndUpdateData.validatePayload: Expected *twmodel.Version, got nil")
 	}
 	return nil
-}
-
-func (t *taskLoadServersAndUpdateData) getServers(version *twmodel.Version) (map[string]string, error) {
-	resp, err := http.Get(fmt.Sprintf("https://%s%s", version.Host, endpointGetServers))
-	if err != nil {
-		return nil, errors.Wrapf(err, "%s: taskLoadServersAndUpdateData.loadServers couldn't load servers", version.Host)
-	}
-	defer resp.Body.Close()
-
-	bodyBytes, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, errors.Wrapf(err, "%s: taskLoadServersAndUpdateData.loadServers couldn't read the response body", version.Host)
-	}
-	body, err := phpserialize.Decode(string(bodyBytes))
-	if err != nil {
-		return nil, errors.Wrapf(err, "%s: taskLoadServersAndUpdateData.loadServers couldn't decode the response body into the go value", version.Host)
-	}
-
-	result := make(map[string]string)
-	for serverKey, url := range body.(map[interface{}]interface{}) {
-		serverKeyStr := serverKey.(string)
-		urlStr := url.(string)
-		if serverKeyStr != "" && urlStr != "" {
-			result[serverKeyStr] = urlStr
-		}
-	}
-	return result, nil
 }

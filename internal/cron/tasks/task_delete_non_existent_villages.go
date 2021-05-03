@@ -2,9 +2,9 @@ package tasks
 
 import (
 	"context"
-	"fmt"
 	"github.com/pkg/errors"
 	"github.com/tribalwarshelp/shared/tw/twmodel"
+	"github.com/tribalwarshelp/shared/tw/twurlbuilder"
 
 	"github.com/tribalwarshelp/cron/internal/cron/queue"
 )
@@ -36,7 +36,7 @@ func (t *taskDeleteNonExistentVillages) execute() error {
 			Get(TaskNameServerDeleteNonExistentVillages).
 				WithArgs(
 					context.Background(),
-					fmt.Sprintf("https://%s.%s", server.Key, server.Version.Host),
+					twurlbuilder.BuildServerURL(server.Key, server.Version.Host),
 					s,
 				),
 		)
