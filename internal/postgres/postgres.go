@@ -1,4 +1,4 @@
-package db
+package postgres
 
 import (
 	"fmt"
@@ -11,13 +11,13 @@ import (
 	"github.com/tribalwarshelp/shared/tw/twmodel"
 )
 
-var log = logrus.WithField("package", "db")
+var log = logrus.WithField("package", "postgres")
 
 type Config struct {
 	LogQueries bool
 }
 
-func New(cfg *Config) (*pg.DB, error) {
+func Connect(cfg *Config) (*pg.DB, error) {
 	db := pg.Connect(prepareOptions())
 
 	if cfg != nil && cfg.LogQueries {
@@ -28,7 +28,7 @@ func New(cfg *Config) (*pg.DB, error) {
 	}
 
 	if err := prepareDB(db); err != nil {
-		return nil, errors.Wrap(err, "New")
+		return nil, errors.Wrap(err, "Connect")
 	}
 
 	return db, nil

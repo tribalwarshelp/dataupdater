@@ -12,7 +12,7 @@ import (
 	"net/http"
 
 	"github.com/tribalwarshelp/cron/internal/cron/queue"
-	"github.com/tribalwarshelp/cron/internal/db"
+	"github.com/tribalwarshelp/cron/internal/postgres"
 )
 
 const (
@@ -48,7 +48,7 @@ func (t *taskLoadServersAndUpdateData) execute(version *twmodel.Version) error {
 			VersionCode: version.Code,
 			Version:     version,
 		}
-		if err := db.CreateSchema(t.db, server); err != nil {
+		if err := postgres.CreateSchema(t.db, server); err != nil {
 			logrus.Warn(errors.Wrapf(err, "taskLoadServersAndUpdateData.execute: %s: couldn't create the schema", server.Key))
 			continue
 		}

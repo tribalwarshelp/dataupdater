@@ -14,7 +14,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	twhelpcron "github.com/tribalwarshelp/cron/internal/cron"
-	"github.com/tribalwarshelp/cron/internal/db"
+	"github.com/tribalwarshelp/cron/internal/postgres"
 
 	"github.com/joho/godotenv"
 	"github.com/robfig/cron/v3"
@@ -38,7 +38,7 @@ func main() {
 		}
 	}()
 
-	dbConn, err := db.New(&db.Config{LogQueries: envutil.GetenvBool("LOG_DB_QUERIES")})
+	dbConn, err := postgres.Connect(&postgres.Config{LogQueries: envutil.GetenvBool("LOG_DB_QUERIES")})
 	if err != nil {
 		logrus.Fatal(errors.Wrap(err, "Couldn't connect to the db"))
 	}
