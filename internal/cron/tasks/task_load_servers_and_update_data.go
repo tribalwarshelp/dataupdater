@@ -7,7 +7,7 @@ import (
 	"github.com/go-pg/pg/v10"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"github.com/tribalwarshelp/shared/models"
+	"github.com/tribalwarshelp/shared/tw/twmodel"
 	"io/ioutil"
 	"net/http"
 
@@ -23,7 +23,7 @@ type taskLoadServersAndUpdateData struct {
 	*task
 }
 
-func (t *taskLoadServersAndUpdateData) execute(version *models.Version) error {
+func (t *taskLoadServersAndUpdateData) execute(version *twmodel.Version) error {
 	if err := t.validatePayload(version); err != nil {
 		log.Debug(err)
 		return nil
@@ -37,14 +37,14 @@ func (t *taskLoadServersAndUpdateData) execute(version *models.Version) error {
 	}
 
 	var serverKeys []string
-	var servers []*models.Server
+	var servers []*twmodel.Server
 	for serverKey := range data {
 		if version.SpecialServers.Contains(serverKey) {
 			continue
 		}
-		server := &models.Server{
+		server := &twmodel.Server{
 			Key:         serverKey,
-			Status:      models.ServerStatusOpen,
+			Status:      twmodel.ServerStatusOpen,
 			VersionCode: version.Code,
 			Version:     version,
 		}
@@ -59,7 +59,7 @@ func (t *taskLoadServersAndUpdateData) execute(version *models.Version) error {
 	if len(servers) > 0 {
 		if _, err := t.db.Model(&servers).
 			OnConflict("(key) DO UPDATE").
-			Set("status = ?", models.ServerStatusOpen).
+			Set("status = ?", twmodel.ServerStatusOpen).
 			Set("version_code = EXCLUDED.version_code").
 			Returning("*").
 			Insert(); err != nil {
@@ -69,8 +69,8 @@ func (t *taskLoadServersAndUpdateData) execute(version *models.Version) error {
 		}
 	}
 
-	if _, err := t.db.Model(&models.Server{}).
-		Set("status = ?", models.ServerStatusClosed).
+	if _, err := t.db.Model(&twmodel.Server{}).
+		Set("status = ?", twmodel.ServerStatusClosed).
 		Where("key NOT IN (?) AND version_code = ?", pg.In(serverKeys), version.Code).
 		Update(); err != nil {
 		err = errors.Wrap(err, "taskLoadServersAndUpdateData.execute: couldn't update server statuses")
@@ -87,14 +87,14 @@ func (t *taskLoadServersAndUpdateData) execute(version *models.Version) error {
 	return nil
 }
 
-func (t *taskLoadServersAndUpdateData) validatePayload(version *models.Version) error {
+func (t *taskLoadServersAndUpdateData) validatePayload(version *twmodel.Version) error {
 	if version == nil {
-		return errors.New("taskLoadServersAndUpdateData.validatePayload: Expected *models.Version, got nil")
+		return errors.New("taskLoadServersAndUpdateData.validatePayload: Expected *twmodel.Version, got nil")
 	}
 	return nil
 }
 
-func (t *taskLoadServersAndUpdateData) getServers(version *models.Version) (map[string]string, error) {
+func (t *taskLoadServersAndUpdateData) getServers(version *twmodel.Version) (map[string]string, error) {
 	resp, err := http.Get(fmt.Sprintf("https://%s%s", version.Host, endpointGetServers))
 	if err != nil {
 		return nil, errors.Wrapf(err, "%s: taskLoadServersAndUpdateData.loadServers couldn't load servers", version.Host)

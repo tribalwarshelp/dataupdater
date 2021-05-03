@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/pkg/errors"
-	"github.com/tribalwarshelp/shared/models"
+	"github.com/tribalwarshelp/shared/tw/twmodel"
 
 	"github.com/tribalwarshelp/cron/internal/cron/queue"
 )
@@ -14,11 +14,11 @@ type taskDeleteNonExistentVillages struct {
 }
 
 func (t *taskDeleteNonExistentVillages) execute() error {
-	var servers []*models.Server
+	var servers []*twmodel.Server
 	err := t.db.
 		Model(&servers).
 		Relation("Version").
-		Where("status = ?", models.ServerStatusOpen).
+		Where("status = ?", twmodel.ServerStatusOpen).
 		Relation("Version").
 		Select()
 	if err != nil {

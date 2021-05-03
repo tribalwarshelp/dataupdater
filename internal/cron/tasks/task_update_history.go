@@ -3,7 +3,7 @@ package tasks
 import (
 	"context"
 	"github.com/pkg/errors"
-	"github.com/tribalwarshelp/shared/models"
+	"github.com/tribalwarshelp/shared/tw/twmodel"
 	"time"
 
 	"github.com/tribalwarshelp/cron/internal/cron/queue"
@@ -23,12 +23,12 @@ func (t *taskUpdateHistory) execute(timezone string) error {
 	}
 	year, month, day := time.Now().In(location).Date()
 	date := time.Date(year, month, day, 1, 30, 0, 0, location)
-	var servers []*models.Server
+	var servers []*twmodel.Server
 	err = t.db.
 		Model(&servers).
 		Where(
 			"status = ? AND (history_updated_at IS NULL OR history_updated_at < ?) AND timezone = ?",
-			models.ServerStatusOpen,
+			twmodel.ServerStatusOpen,
 			date,
 			timezone,
 		).

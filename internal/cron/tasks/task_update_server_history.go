@@ -3,7 +3,7 @@ package tasks
 import (
 	"github.com/go-pg/pg/v10"
 	"github.com/pkg/errors"
-	"github.com/tribalwarshelp/shared/models"
+	"github.com/tribalwarshelp/shared/tw/twmodel"
 	"time"
 )
 
@@ -11,7 +11,7 @@ type taskUpdateServerHistory struct {
 	*task
 }
 
-func (t *taskUpdateServerHistory) execute(timezone string, server *models.Server) error {
+func (t *taskUpdateServerHistory) execute(timezone string, server *twmodel.Server) error {
 	if err := t.validatePayload(server); err != nil {
 		log.Debug(err)
 		return nil
@@ -39,9 +39,9 @@ func (t *taskUpdateServerHistory) execute(timezone string, server *models.Server
 	return nil
 }
 
-func (t *taskUpdateServerHistory) validatePayload(server *models.Server) error {
+func (t *taskUpdateServerHistory) validatePayload(server *twmodel.Server) error {
 	if server == nil {
-		return errors.New("taskUpdateServerHistory.validatePayload: Expected *models.Server, got nil")
+		return errors.New("taskUpdateServerHistory.validatePayload: Expected *twmodel.Server, got nil")
 	}
 
 	return nil
@@ -49,21 +49,21 @@ func (t *taskUpdateServerHistory) validatePayload(server *models.Server) error {
 
 type workerUpdateServerHistory struct {
 	db       *pg.DB
-	server   *models.Server
+	server   *twmodel.Server
 	location *time.Location
 }
 
 func (w *workerUpdateServerHistory) update() error {
-	var players []*models.Player
+	var players []*twmodel.Player
 	if err := w.db.Model(&players).Where("exists = true").Select(); err != nil {
 		return errors.Wrap(err, "couldn't load players")
 	}
 
 	now := time.Now().In(w.location)
 	createDate := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
-	var ph []*models.PlayerHistory
+	var ph []*twmodel.PlayerHistory
 	for _, player := range players {
-		ph = append(ph, &models.PlayerHistory{
+		ph = append(ph, &twmodel.PlayerHistory{
 			OpponentsDefeated: player.OpponentsDefeated,
 			PlayerID:          player.ID,
 			TotalVillages:     player.TotalVillages,
@@ -74,13 +74,13 @@ func (w *workerUpdateServerHistory) update() error {
 		})
 	}
 
-	var tribes []*models.Tribe
+	var tribes []*twmodel.Tribe
 	if err := w.db.Model(&tribes).Where("exists = true").Select(); err != nil {
 		return errors.Wrap(err, "couldn't load tribes")
 	}
-	var th []*models.TribeHistory
+	var th []*twmodel.TribeHistory
 	for _, tribe := range tribes {
-		th = append(th, &models.TribeHistory{
+		th = append(th, &twmodel.TribeHistory{
 			OpponentsDefeated: tribe.OpponentsDefeated,
 			TribeID:           tribe.ID,
 			TotalMembers:      tribe.TotalMembers,
@@ -97,7 +97,7 @@ func (w *workerUpdateServerHistory) update() error {
 	if err != nil {
 		return err
 	}
-	defer func(s *models.Server) {
+	defer func(s *twmodel.Server) {
 		if err := tx.Close(); err != nil {
 			log.Warn(errors.Wrapf(err, "%s: Couldn't rollback the transaction", s.Key))
 		}
