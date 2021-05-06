@@ -68,7 +68,7 @@ func main() {
 		logrus.Fatal(err)
 	}
 
-	logrus.Info("Cron is running!")
+	logrus.Info("Cron is up and running!")
 
 	channel := make(chan os.Signal, 1)
 	signal.Notify(channel, os.Interrupt, os.Kill, syscall.SIGTERM, syscall.SIGINT)
