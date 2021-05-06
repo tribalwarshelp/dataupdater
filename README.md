@@ -9,7 +9,7 @@ Features:
 
 ## Development
 
-**Required env variables:**
+**Required ENV variables:**
 
 ```
 DB_USER=your_db_user
