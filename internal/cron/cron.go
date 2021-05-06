@@ -6,9 +6,9 @@ import (
 	"github.com/go-pg/pg/v10"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"github.com/tribalwarshelp/shared/tw/twmodel"
 
 	"github.com/robfig/cron/v3"
-	"github.com/tribalwarshelp/shared/models"
 
 	"github.com/tribalwarshelp/cron/internal/cron/queue"
 	"github.com/tribalwarshelp/cron/internal/cron/tasks"
@@ -44,7 +44,7 @@ func New(cfg *Config) (*Cron, error) {
 }
 
 func (c *Cron) init() error {
-	var versions []*models.Version
+	var versions []*twmodel.Version
 	if err := c.db.Model(&versions).DistinctOn("timezone").Select(); err != nil {
 		return errors.Wrap(err, "Cron.init: couldn't load versions")
 	}

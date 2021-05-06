@@ -1,14 +1,13 @@
 package tasks
 
 import (
-	"github.com/tribalwarshelp/shared/tw/dataloader"
+	"github.com/tribalwarshelp/shared/tw/twdataloader"
+	"github.com/tribalwarshelp/shared/tw/twmodel"
 	"net/http"
 	"time"
-
-	"github.com/tribalwarshelp/shared/models"
 )
 
-func countPlayerVillages(villages []*models.Village) int {
+func countPlayerVillages(villages []*twmodel.Village) int {
 	count := 0
 	for _, village := range villages {
 		if village.PlayerID != 0 {
@@ -39,15 +38,15 @@ func newHTTPClient() *http.Client {
 	}
 }
 
-func newDataloader(url string) dataloader.DataLoader {
-	return dataloader.New(&dataloader.Config{
+func newServerDataLoader(url string) twdataloader.ServerDataLoader {
+	return twdataloader.NewServerDataLoader(&twdataloader.ServerDataLoaderConfig{
 		BaseURL: url,
 		Client:  newHTTPClient(),
 	})
 }
 
 type playersSearchableByID struct {
-	players []*models.Player
+	players []*twmodel.Player
 }
 
 func (searchable playersSearchableByID) getID(index int) int {
@@ -59,7 +58,7 @@ func (searchable playersSearchableByID) len() int {
 }
 
 type tribesSearchableByID struct {
-	tribes []*models.Tribe
+	tribes []*twmodel.Tribe
 }
 
 func (searchable tribesSearchableByID) getID(index int) int {
@@ -71,7 +70,7 @@ func (searchable tribesSearchableByID) len() int {
 }
 
 type villagesSearchableByID struct {
-	villages []*models.Village
+	villages []*twmodel.Village
 }
 
 func (searchable villagesSearchableByID) getID(index int) int {
@@ -83,7 +82,7 @@ func (searchable villagesSearchableByID) len() int {
 }
 
 type ennoblementsSearchableByNewOwnerID struct {
-	ennoblements []*models.Ennoblement
+	ennoblements []*twmodel.Ennoblement
 }
 
 func (searchable ennoblementsSearchableByNewOwnerID) getID(index int) int {

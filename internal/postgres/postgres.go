@@ -1,35 +1,34 @@
-package db
+package postgres
 
 import (
 	"fmt"
-	gopglogrusquerylogger "github.com/Kichiyaki/go-pg-logrus-query-logger/v10"
+	"github.com/Kichiyaki/go-pg-logrus-query-logger/v10"
+	"github.com/Kichiyaki/goutil/envutil"
 	"github.com/go-pg/pg/v10"
 	"github.com/go-pg/pg/v10/orm"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"github.com/tribalwarshelp/shared/models"
-
-	envutils "github.com/tribalwarshelp/cron/internal/utils/env"
+	"github.com/tribalwarshelp/shared/tw/twmodel"
 )
 
-var log = logrus.WithField("package", "db")
+var log = logrus.WithField("package", "postgres")
 
 type Config struct {
 	LogQueries bool
 }
 
-func New(cfg *Config) (*pg.DB, error) {
+func Connect(cfg *Config) (*pg.DB, error) {
 	db := pg.Connect(prepareOptions())
 
 	if cfg != nil && cfg.LogQueries {
-		db.AddQueryHook(gopglogrusquerylogger.QueryLogger{
+		db.AddQueryHook(querylogger.Logger{
 			Log:            log,
 			MaxQueryLength: 5000,
 		})
 	}
 
 	if err := prepareDB(db); err != nil {
-		return nil, errors.Wrap(err, "New")
+		return nil, errors.Wrap(err, "Connect")
 	}
 
 	return db, nil
@@ -37,11 +36,11 @@ func New(cfg *Config) (*pg.DB, error) {
 
 func prepareOptions() *pg.Options {
 	return &pg.Options{
-		User:     envutils.GetenvString("DB_USER"),
-		Password: envutils.GetenvString("DB_PASSWORD"),
-		Database: envutils.GetenvString("DB_NAME"),
-		Addr:     envutils.GetenvString("DB_HOST") + ":" + envutils.GetenvString("DB_PORT"),
-		PoolSize: envutils.GetenvInt("DB_POOL_SIZE"),
+		User:     envutil.GetenvString("DB_USER"),
+		Password: envutil.GetenvString("DB_PASSWORD"),
+		Database: envutil.GetenvString("DB_NAME"),
+		Addr:     envutil.GetenvString("DB_HOST") + ":" + envutil.GetenvString("DB_PORT"),
+		PoolSize: envutil.GetenvInt("DB_POOL_SIZE"),
 	}
 }
 
@@ -57,11 +56,11 @@ func prepareDB(db *pg.DB) error {
 	}()
 
 	dbModels := []interface{}{
-		(*models.SpecialServer)(nil),
-		(*models.Server)(nil),
-		(*models.Version)(nil),
-		(*models.PlayerToServer)(nil),
-		(*models.PlayerNameChange)(nil),
+		(*twmodel.SpecialServer)(nil),
+		(*twmodel.Server)(nil),
+		(*twmodel.Version)(nil),
+		(*twmodel.PlayerToServer)(nil),
+		(*twmodel.PlayerNameChange)(nil),
 	}
 
 	for _, model := range dbModels {
@@ -105,7 +104,7 @@ func prepareDB(db *pg.DB) error {
 		return errors.Wrap(err, "Couldn't commit changes")
 	}
 
-	var servers []*models.Server
+	var servers []*twmodel.Server
 	if err := db.Model(&servers).Select(); err != nil {
 		return errors.Wrap(err, "Couldn't load servers")
 	}
@@ -119,7 +118,7 @@ func prepareDB(db *pg.DB) error {
 	return nil
 }
 
-func CreateSchema(db *pg.DB, server *models.Server) error {
+func CreateSchema(db *pg.DB, server *twmodel.Server) error {
 	return createSchema(db, server, false)
 }
 
@@ -135,7 +134,7 @@ func SchemaExists(db *pg.DB, schemaName string) bool {
 	return exists
 }
 
-func createSchema(db *pg.DB, server *models.Server, init bool) error {
+func createSchema(db *pg.DB, server *twmodel.Server, init bool) error {
 	if !init && SchemaExists(db, server.Key) {
 		return nil
 	}
@@ -155,16 +154,16 @@ func createSchema(db *pg.DB, server *models.Server, init bool) error {
 	}
 
 	dbModels := []interface{}{
-		(*models.Tribe)(nil),
-		(*models.Player)(nil),
-		(*models.Village)(nil),
-		(*models.Ennoblement)(nil),
-		(*models.ServerStats)(nil),
-		(*models.TribeHistory)(nil),
-		(*models.PlayerHistory)(nil),
-		(*models.TribeChange)(nil),
-		(*models.DailyPlayerStats)(nil),
-		(*models.DailyTribeStats)(nil),
+		(*twmodel.Tribe)(nil),
+		(*twmodel.Player)(nil),
+		(*twmodel.Village)(nil),
+		(*twmodel.Ennoblement)(nil),
+		(*twmodel.ServerStats)(nil),
+		(*twmodel.TribeHistory)(nil),
+		(*twmodel.PlayerHistory)(nil),
+		(*twmodel.TribeChange)(nil),
+		(*twmodel.DailyPlayerStats)(nil),
+		(*twmodel.DailyTribeStats)(nil),
 	}
 
 	for _, model := range dbModels {

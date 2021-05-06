@@ -113,10 +113,7 @@ func Get(taskName string) *taskq.Task {
 }
 
 func validateConfig(cfg *Config) error {
-	if cfg == nil {
-		return errors.New("Config hasn't been provided")
-	}
-	if cfg.DB == nil {
+	if cfg == nil || cfg.DB == nil {
 		return errors.New("cfg.DB is required")
 	}
 	if cfg.Queue == nil {

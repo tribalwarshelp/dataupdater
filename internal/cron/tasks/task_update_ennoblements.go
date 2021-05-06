@@ -2,9 +2,9 @@ package tasks
 
 import (
 	"context"
-	"fmt"
 	"github.com/pkg/errors"
-	"github.com/tribalwarshelp/shared/models"
+	"github.com/tribalwarshelp/shared/tw/twmodel"
+	"github.com/tribalwarshelp/shared/tw/twurlbuilder"
 
 	"github.com/tribalwarshelp/cron/internal/cron/queue"
 )
@@ -14,11 +14,11 @@ type taskUpdateEnnoblements struct {
 }
 
 func (t *taskUpdateEnnoblements) execute() error {
-	var servers []*models.Server
+	var servers []*twmodel.Server
 	err := t.db.
 		Model(&servers).
 		Relation("Version").
-		Where("status = ?", models.ServerStatusOpen).
+		Where("status = ?", twmodel.ServerStatusOpen).
 		Select()
 	if err != nil {
 		err = errors.Wrap(err, "taskUpdateEnnoblements.execute")
@@ -31,7 +31,7 @@ func (t *taskUpdateEnnoblements) execute() error {
 		err := t.queue.Add(
 			queue.EnnoblementsQueue,
 			Get(TaskUpdateServerEnnoblements).
-				WithArgs(context.Background(), fmt.Sprintf("https://%s.%s", server.Key, server.Version.Host), s),
+				WithArgs(context.Background(), twurlbuilder.BuildServerURL(server.Key, server.Version.Host), s),
 		)
 		if err != nil {
 			log.Warn(

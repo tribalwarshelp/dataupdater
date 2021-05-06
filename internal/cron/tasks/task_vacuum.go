@@ -3,7 +3,7 @@ package tasks
 import (
 	"context"
 	"github.com/pkg/errors"
-	"github.com/tribalwarshelp/shared/models"
+	"github.com/tribalwarshelp/shared/tw/twmodel"
 
 	"github.com/tribalwarshelp/cron/internal/cron/queue"
 )
@@ -13,7 +13,7 @@ type taskVacuum struct {
 }
 
 func (t *taskVacuum) execute() error {
-	var servers []*models.Server
+	var servers []*twmodel.Server
 	err := t.db.
 		Model(&servers).
 		Select()

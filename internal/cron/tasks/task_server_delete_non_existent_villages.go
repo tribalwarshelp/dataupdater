@@ -3,15 +3,15 @@ package tasks
 import (
 	"github.com/go-pg/pg/v10"
 	"github.com/pkg/errors"
-	"github.com/tribalwarshelp/shared/models"
-	"github.com/tribalwarshelp/shared/tw/dataloader"
+	"github.com/tribalwarshelp/shared/tw/twdataloader"
+	"github.com/tribalwarshelp/shared/tw/twmodel"
 )
 
 type taskServerDeleteNonExistentVillages struct {
 	*task
 }
 
-func (t *taskServerDeleteNonExistentVillages) execute(url string, server *models.Server) error {
+func (t *taskServerDeleteNonExistentVillages) execute(url string, server *twmodel.Server) error {
 	if err := t.validatePayload(server); err != nil {
 		log.Debug(err)
 		return nil
@@ -20,7 +20,7 @@ func (t *taskServerDeleteNonExistentVillages) execute(url string, server *models
 	entry.Infof("taskServerDeleteNonExistentVillages.execute: %s: Deleting non-existent villages...", server.Key)
 	err := (&workerDeleteNonExistentVillages{
 		db:         t.db.WithParam("SERVER", pg.Safe(server.Key)),
-		dataloader: newDataloader(url),
+		dataloader: newServerDataLoader(url),
 		server:     server,
 	}).delete()
 	if err != nil {
@@ -32,9 +32,9 @@ func (t *taskServerDeleteNonExistentVillages) execute(url string, server *models
 	return nil
 }
 
-func (t *taskServerDeleteNonExistentVillages) validatePayload(server *models.Server) error {
+func (t *taskServerDeleteNonExistentVillages) validatePayload(server *twmodel.Server) error {
 	if server == nil {
-		return errors.New("taskUpdateServerData.validatePayload: Expected *models.Server, got nil")
+		return errors.New("taskUpdateServerData.validatePayload: Expected *twmodel.Server, got nil")
 	}
 
 	return nil
@@ -42,8 +42,8 @@ func (t *taskServerDeleteNonExistentVillages) validatePayload(server *models.Ser
 
 type workerDeleteNonExistentVillages struct {
 	db         *pg.DB
-	dataloader dataloader.DataLoader
-	server     *models.Server
+	dataloader twdataloader.ServerDataLoader
+	server     *twmodel.Server
 }
 
 func (w *workerDeleteNonExistentVillages) delete() error {
@@ -54,9 +54,9 @@ func (w *workerDeleteNonExistentVillages) delete() error {
 	var idsToDelete []int
 	searchableByVillageID := &villagesSearchableByID{villages}
 	if err := w.db.
-		Model(&models.Village{}).
+		Model(&twmodel.Village{}).
 		Column("id").
-		ForEach(func(village *models.Village) error {
+		ForEach(func(village *twmodel.Village) error {
 			index := searchByID(searchableByVillageID, village.ID)
 			if index < 0 {
 				idsToDelete = append(idsToDelete, village.ID)
@@ -68,7 +68,7 @@ func (w *workerDeleteNonExistentVillages) delete() error {
 
 	totalDeleted := 0
 	if len(idsToDelete) > 0 {
-		result, err := w.db.Model(&models.Village{}).Where("id = ANY(?)", pg.Array(idsToDelete)).Delete()
+		result, err := w.db.Model(&twmodel.Village{}).Where("id = ANY(?)", pg.Array(idsToDelete)).Delete()
 		if err != nil {
 			return errors.Wrap(err, "workerDeleteNonExistentVillages.delete")
 		}

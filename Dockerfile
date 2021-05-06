@@ -12,23 +12,23 @@ RUN go mod download
 # Copy the source from the current directory to the Working Directory inside the container
 COPY . .
 
-RUN go build -o main .
+RUN go build -o twcron .
 
 ######## Start a new stage from scratch #######
-FROM alpine:latest  
+FROM alpine:latest
 
 RUN apk --no-cache add ca-certificates
 
 WORKDIR /root/
 
 # Copy the Pre-built binary file from the previous stage
-COPY --from=builder /app/main .
+COPY --from=builder /app/twcron .
 
-ENV MODE=production
+ENV APP_MODE=production
 EXPOSE 8080
 
 RUN apk add --no-cache tzdata
 ADD https://github.com/ufoscout/docker-compose-wait/releases/download/2.2.1/wait ./wait
 RUN chmod +x ./wait
 
-CMD ./wait && ./main
+CMD ./wait && ./twcron

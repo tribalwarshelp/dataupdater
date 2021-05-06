@@ -3,15 +3,15 @@ package tasks
 import (
 	"github.com/go-pg/pg/v10"
 	"github.com/pkg/errors"
-	"github.com/tribalwarshelp/shared/models"
-	"github.com/tribalwarshelp/shared/tw/dataloader"
+	"github.com/tribalwarshelp/shared/tw/twdataloader"
+	"github.com/tribalwarshelp/shared/tw/twmodel"
 )
 
 type taskUpdateServerEnnoblements struct {
 	*task
 }
 
-func (t *taskUpdateServerEnnoblements) execute(url string, server *models.Server) error {
+func (t *taskUpdateServerEnnoblements) execute(url string, server *twmodel.Server) error {
 	if err := t.validatePayload(server); err != nil {
 		log.Debug(err)
 		return nil
@@ -20,7 +20,7 @@ func (t *taskUpdateServerEnnoblements) execute(url string, server *models.Server
 	entry.Debugf("%s: update of the ennoblements has started...", server.Key)
 	err := (&workerUpdateServerEnnoblements{
 		db:         t.db.WithParam("SERVER", pg.Safe(server.Key)),
-		dataloader: newDataloader(url),
+		dataloader: newServerDataLoader(url),
 	}).update()
 	if err != nil {
 		err = errors.Wrap(err, "taskUpdateServerEnnoblements.execute")
@@ -32,9 +32,9 @@ func (t *taskUpdateServerEnnoblements) execute(url string, server *models.Server
 	return nil
 }
 
-func (t *taskUpdateServerEnnoblements) validatePayload(server *models.Server) error {
+func (t *taskUpdateServerEnnoblements) validatePayload(server *twmodel.Server) error {
 	if server == nil {
-		return errors.Errorf("taskUpdateServerEnnoblements.validatePayload: Expected *models.Server, got nil")
+		return errors.Errorf("taskUpdateServerEnnoblements.validatePayload: Expected *twmodel.Server, got nil")
 	}
 
 	return nil
@@ -42,11 +42,11 @@ func (t *taskUpdateServerEnnoblements) validatePayload(server *models.Server) er
 
 type workerUpdateServerEnnoblements struct {
 	db         *pg.DB
-	dataloader dataloader.DataLoader
+	dataloader twdataloader.ServerDataLoader
 }
 
-func (w *workerUpdateServerEnnoblements) loadEnnoblements() ([]*models.Ennoblement, error) {
-	lastEnnoblement := &models.Ennoblement{}
+func (w *workerUpdateServerEnnoblements) loadEnnoblements() ([]*twmodel.Ennoblement, error) {
+	lastEnnoblement := &twmodel.Ennoblement{}
 	if err := w.db.
 		Model(lastEnnoblement).
 		Limit(1).
@@ -55,7 +55,7 @@ func (w *workerUpdateServerEnnoblements) loadEnnoblements() ([]*models.Ennobleme
 		return nil, errors.Wrapf(err, "couldn't load last ennoblement")
 	}
 
-	return w.dataloader.LoadEnnoblements(&dataloader.LoadEnnoblementsConfig{
+	return w.dataloader.LoadEnnoblements(&twdataloader.LoadEnnoblementsConfig{
 		EnnobledAtGT: lastEnnoblement.EnnobledAt,
 	})
 }

@@ -5,8 +5,8 @@ import (
 	"github.com/go-pg/pg/v10"
 	"github.com/go-pg/pg/v10/orm"
 	"github.com/pkg/errors"
-	"github.com/tribalwarshelp/shared/models"
-	"github.com/tribalwarshelp/shared/tw/dataloader"
+	"github.com/tribalwarshelp/shared/tw/twdataloader"
+	"github.com/tribalwarshelp/shared/tw/twmodel"
 	"time"
 )
 
@@ -14,7 +14,7 @@ type taskUpdateServerData struct {
 	*task
 }
 
-func (t *taskUpdateServerData) execute(url string, server *models.Server) error {
+func (t *taskUpdateServerData) execute(url string, server *twmodel.Server) error {
 	if err := t.validatePayload(server); err != nil {
 		log.Debug(err)
 		return nil
@@ -24,7 +24,7 @@ func (t *taskUpdateServerData) execute(url string, server *models.Server) error 
 	entry.Infof("taskUpdateServerData.execute: %s: Update of the server data has started...", server.Key)
 	err := (&workerUpdateServerData{
 		db:         t.db.WithParam("SERVER", pg.Safe(server.Key)),
-		dataloader: newDataloader(url),
+		dataloader: newServerDataLoader(url),
 		server:     server,
 	}).update()
 	if err != nil {
@@ -42,9 +42,9 @@ func (t *taskUpdateServerData) execute(url string, server *models.Server) error 
 	return nil
 }
 
-func (t *taskUpdateServerData) validatePayload(server *models.Server) error {
+func (t *taskUpdateServerData) validatePayload(server *twmodel.Server) error {
 	if server == nil {
-		return errors.New("taskUpdateServerData.validatePayload: Expected *models.Server, got nil")
+		return errors.New("taskUpdateServerData.validatePayload: Expected *twmodel.Server, got nil")
 	}
 
 	return nil
@@ -52,20 +52,20 @@ func (t *taskUpdateServerData) validatePayload(server *models.Server) error {
 
 type workerUpdateServerData struct {
 	db         *pg.DB
-	dataloader dataloader.DataLoader
-	server     *models.Server
+	dataloader twdataloader.ServerDataLoader
+	server     *twmodel.Server
 }
 
 type loadPlayersResult struct {
 	ids             []int
-	players         []*models.Player
-	playersToServer []*models.PlayerToServer
+	players         []*twmodel.Player
+	playersToServer []*twmodel.PlayerToServer
 	deletedPlayers  []int
 	numberOfPlayers int
 }
 
-func (w *workerUpdateServerData) loadPlayers(od map[int]*models.OpponentsDefeated) (loadPlayersResult, error) {
-	var ennoblements []*models.Ennoblement
+func (w *workerUpdateServerData) loadPlayers(od map[int]*twmodel.OpponentsDefeated) (loadPlayersResult, error) {
+	var ennoblements []*twmodel.Ennoblement
 	result := loadPlayersResult{}
 	if err := w.db.
 		Model(&ennoblements).
@@ -83,7 +83,7 @@ func (w *workerUpdateServerData) loadPlayers(od map[int]*models.OpponentsDefeate
 	result.numberOfPlayers = len(result.players)
 
 	now := time.Now()
-	result.playersToServer = make([]*models.PlayerToServer, result.numberOfPlayers)
+	result.playersToServer = make([]*twmodel.PlayerToServer, result.numberOfPlayers)
 	result.ids = make([]int, result.numberOfPlayers)
 	searchableByNewOwnerID := &ennoblementsSearchableByNewOwnerID{ennoblements}
 	for index, player := range result.players {
@@ -99,7 +99,7 @@ func (w *workerUpdateServerData) loadPlayers(od map[int]*models.OpponentsDefeate
 			player.DailyGrowth = calcPlayerDailyGrowth(diffInDays, player.Points)
 		}
 
-		result.playersToServer[index] = &models.PlayerToServer{
+		result.playersToServer[index] = &twmodel.PlayerToServer{
 			PlayerID:  player.ID,
 			ServerKey: w.server.Key,
 		}
@@ -109,10 +109,10 @@ func (w *workerUpdateServerData) loadPlayers(od map[int]*models.OpponentsDefeate
 
 	searchablePlayers := &playersSearchableByID{result.players}
 	if err := w.db.
-		Model(&models.Player{}).
+		Model(&twmodel.Player{}).
 		Column("id").
 		Where("exists = true").
-		ForEach(func(player *models.Player) error {
+		ForEach(func(player *twmodel.Player) error {
 			if index := searchByID(searchablePlayers, player.ID); index < 0 {
 				result.deletedPlayers = append(result.deletedPlayers, player.ID)
 			}
@@ -126,12 +126,12 @@ func (w *workerUpdateServerData) loadPlayers(od map[int]*models.OpponentsDefeate
 
 type loadTribesResult struct {
 	ids            []int
-	tribes         []*models.Tribe
+	tribes         []*twmodel.Tribe
 	deletedTribes  []int
 	numberOfTribes int
 }
 
-func (w *workerUpdateServerData) loadTribes(od map[int]*models.OpponentsDefeated, numberOfVillages int) (loadTribesResult, error) {
+func (w *workerUpdateServerData) loadTribes(od map[int]*twmodel.OpponentsDefeated, numberOfVillages int) (loadTribesResult, error) {
 	var err error
 	result := loadTribesResult{}
 	result.tribes, err = w.dataloader.LoadTribes()
@@ -156,10 +156,10 @@ func (w *workerUpdateServerData) loadTribes(od map[int]*models.OpponentsDefeated
 
 	searchableTribes := &tribesSearchableByID{result.tribes}
 	if err := w.db.
-		Model(&models.Tribe{}).
+		Model(&twmodel.Tribe{}).
 		Column("id").
 		Where("exists = true").
-		ForEach(func(tribe *models.Tribe) error {
+		ForEach(func(tribe *twmodel.Tribe) error {
 			if index := searchByID(searchableTribes, tribe.ID); index < 0 {
 				result.deletedTribes = append(result.deletedTribes, tribe.ID)
 			}
@@ -171,8 +171,8 @@ func (w *workerUpdateServerData) loadTribes(od map[int]*models.OpponentsDefeated
 	return result, nil
 }
 
-func (w *workerUpdateServerData) calculateODifference(od1 models.OpponentsDefeated, od2 models.OpponentsDefeated) models.OpponentsDefeated {
-	return models.OpponentsDefeated{
+func (w *workerUpdateServerData) calculateODifference(od1 twmodel.OpponentsDefeated, od2 twmodel.OpponentsDefeated) twmodel.OpponentsDefeated {
+	return twmodel.OpponentsDefeated{
 		RankAtt:    (od1.RankAtt - od2.RankAtt) * -1,
 		ScoreAtt:   od1.ScoreAtt - od2.ScoreAtt,
 		RankDef:    (od1.RankDef - od2.RankDef) * -1,
@@ -185,16 +185,16 @@ func (w *workerUpdateServerData) calculateODifference(od1 models.OpponentsDefeat
 }
 
 func (w *workerUpdateServerData) calculateTodaysTribeStats(
-	tribes []*models.Tribe,
-	history []*models.TribeHistory,
-) []*models.DailyTribeStats {
-	var todaysStats []*models.DailyTribeStats
+	tribes []*twmodel.Tribe,
+	history []*twmodel.TribeHistory,
+) []*twmodel.DailyTribeStats {
+	var todaysStats []*twmodel.DailyTribeStats
 	searchableTribes := &tribesSearchableByID{tribes}
 
 	for _, historyRecord := range history {
 		if index := searchByID(searchableTribes, historyRecord.TribeID); index != -1 {
 			tribe := tribes[index]
-			todaysStats = append(todaysStats, &models.DailyTribeStats{
+			todaysStats = append(todaysStats, &twmodel.DailyTribeStats{
 				TribeID:           tribe.ID,
 				Members:           tribe.TotalMembers - historyRecord.TotalMembers,
 				Villages:          tribe.TotalVillages - historyRecord.TotalVillages,
@@ -212,16 +212,16 @@ func (w *workerUpdateServerData) calculateTodaysTribeStats(
 }
 
 func (w *workerUpdateServerData) calculateDailyPlayerStats(
-	players []*models.Player,
-	history []*models.PlayerHistory,
-) []*models.DailyPlayerStats {
-	var todaysStats []*models.DailyPlayerStats
+	players []*twmodel.Player,
+	history []*twmodel.PlayerHistory,
+) []*twmodel.DailyPlayerStats {
+	var todaysStats []*twmodel.DailyPlayerStats
 	searchablePlayers := &playersSearchableByID{players}
 
 	for _, historyRecord := range history {
 		if index := searchByID(searchablePlayers, historyRecord.PlayerID); index != -1 {
 			player := players[index]
-			todaysStats = append(todaysStats, &models.DailyPlayerStats{
+			todaysStats = append(todaysStats, &twmodel.DailyPlayerStats{
 				PlayerID:          player.ID,
 				Villages:          player.TotalVillages - historyRecord.TotalVillages,
 				Points:            player.Points - historyRecord.Points,
@@ -281,7 +281,7 @@ func (w *workerUpdateServerData) update() error {
 	defer cancel()
 	return w.db.RunInTransaction(ctx, func(tx *pg.Tx) error {
 		if len(tribesResult.deletedTribes) > 0 {
-			if _, err := tx.Model(&models.Tribe{}).
+			if _, err := tx.Model(&twmodel.Tribe{}).
 				Where("tribe.id  = ANY (?)", pg.Array(tribesResult.deletedTribes)).
 				Set("exists = false").
 				Set("deleted_at = now()").
@@ -309,7 +309,7 @@ func (w *workerUpdateServerData) update() error {
 				return errors.Wrap(err, "couldn't insert tribes")
 			}
 
-			var tribesHistory []*models.TribeHistory
+			var tribesHistory []*twmodel.TribeHistory
 			if err := tx.
 				Model(&tribesHistory).
 				DistinctOn("tribe_id").
@@ -339,7 +339,7 @@ func (w *workerUpdateServerData) update() error {
 		}
 
 		if len(playersResult.deletedPlayers) > 0 {
-			if _, err := tx.Model(&models.Player{}).
+			if _, err := tx.Model(&twmodel.Player{}).
 				Where("player.id = ANY (?)", pg.Array(playersResult.deletedPlayers)).
 				Set("exists = false").
 				Set("deleted_at = now()").
@@ -365,7 +365,7 @@ func (w *workerUpdateServerData) update() error {
 				return errors.Wrap(err, "couldn't insert players")
 			}
 
-			var playerHistory []*models.PlayerHistory
+			var playerHistory []*twmodel.PlayerHistory
 			if err := tx.Model(&playerHistory).
 				DistinctOn("player_id").
 				Column("player_history.*").
