@@ -47,7 +47,7 @@ func New(cfg *Config) (Queue, error) {
 func (q *queue) init(cfg *Config) error {
 	q.factory = redisq.NewFactory()
 	q.mainQueue = q.registerQueue(MainQueue, cfg.WorkerLimit)
-	q.ennoblementsQueue = q.registerQueue(EnnoblementsQueue, cfg.WorkerLimit*2)
+	q.ennoblementsQueue = q.registerQueue(EnnoblementsQueue, cfg.WorkerLimit)
 
 	return nil
 }
