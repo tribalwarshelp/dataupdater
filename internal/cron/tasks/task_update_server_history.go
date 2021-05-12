@@ -104,13 +104,13 @@ func (w *workerUpdateServerHistory) update() error {
 	}(w.server)
 
 	if len(ph) > 0 {
-		if _, err := w.db.Model(&ph).Insert(); err != nil {
+		if _, err := w.db.Model(&ph).Returning("NULL").Insert(); err != nil {
 			return errors.Wrap(err, "couldn't insert players history")
 		}
 	}
 
 	if len(th) > 0 {
-		if _, err := w.db.Model(&th).Insert(); err != nil {
+		if _, err := w.db.Model(&th).Returning("NULL").Insert(); err != nil {
 			return errors.Wrap(err, "couldn't insert tribes history")
 		}
 	}

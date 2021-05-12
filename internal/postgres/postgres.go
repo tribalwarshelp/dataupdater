@@ -23,7 +23,7 @@ func Connect(cfg *Config) (*pg.DB, error) {
 	if cfg != nil && cfg.LogQueries {
 		db.AddQueryHook(querylogger.Logger{
 			Log:            log,
-			MaxQueryLength: 5000,
+			MaxQueryLength: 2000,
 		})
 	}
 

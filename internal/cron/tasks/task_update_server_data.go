@@ -305,6 +305,7 @@ func (w *workerUpdateServerData) update() error {
 				Set("dominance = EXCLUDED.dominance").
 				Set("deleted_at = null").
 				Apply(appendODSetClauses).
+				Returning("NULL").
 				Insert(); err != nil {
 				return errors.Wrap(err, "couldn't insert tribes")
 			}
@@ -332,6 +333,7 @@ func (w *workerUpdateServerData) update() error {
 					Set("rank = EXCLUDED.rank").
 					Set("dominance = EXCLUDED.dominance").
 					Apply(appendODSetClauses).
+					Returning("NULL").
 					Insert(); err != nil {
 					return errors.Wrap(err, "couldn't insert today's tribe stats")
 				}
@@ -360,6 +362,7 @@ func (w *workerUpdateServerData) update() error {
 				Set("tribe_id = EXCLUDED.tribe_id").
 				Set("daily_growth = EXCLUDED.daily_growth").
 				Set("deleted_at = null").
+				Returning("NULL").
 				Apply(appendODSetClauses).
 				Insert(); err != nil {
 				return errors.Wrap(err, "couldn't insert players")
@@ -371,7 +374,8 @@ func (w *workerUpdateServerData) update() error {
 				Column("player_history.*").
 				Where("player.exists = true").
 				Relation("Player._").
-				Order("player_id DESC", "create_date DESC").Select(); err != nil && err != pg.ErrNoRows {
+				Order("player_id DESC", "create_date DESC").
+				Select(); err != nil && err != pg.ErrNoRows {
 				return errors.Wrap(err, "couldn't select player history records")
 			}
 			todaysPlayerStats := w.calculateDailyPlayerStats(playersResult.players, playerHistory)
@@ -383,6 +387,7 @@ func (w *workerUpdateServerData) update() error {
 					Set("points = EXCLUDED.points").
 					Set("rank = EXCLUDED.rank").
 					Apply(appendODSetClauses).
+					Returning("NULL").
 					Insert(); err != nil {
 					return errors.Wrap(err, "couldn't insert today's player stats")
 				}
@@ -390,7 +395,11 @@ func (w *workerUpdateServerData) update() error {
 		}
 
 		if len(playersResult.playersToServer) > 0 {
-			if _, err := tx.Model(&playersResult.playersToServer).OnConflict("DO NOTHING").Insert(); err != nil {
+			if _, err := tx.
+				Model(&playersResult.playersToServer).
+				OnConflict("DO NOTHING").
+				Returning("NULL").
+				Insert(); err != nil {
 				return errors.Wrap(err, "couldn't associate players with the server")
 			}
 		}
@@ -404,6 +413,7 @@ func (w *workerUpdateServerData) update() error {
 				Set("y = EXCLUDED.y").
 				Set("bonus = EXCLUDED.bonus").
 				Set("player_id = EXCLUDED.player_id").
+				Returning("NULL").
 				Insert(); err != nil {
 				return errors.Wrap(err, "couldn't insert villages")
 			}

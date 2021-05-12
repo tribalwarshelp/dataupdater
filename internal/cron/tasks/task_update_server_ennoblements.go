@@ -67,7 +67,7 @@ func (w *workerUpdateServerEnnoblements) update() error {
 	}
 
 	if len(ennoblements) > 0 {
-		if _, err := w.db.Model(&ennoblements).Insert(); err != nil {
+		if _, err := w.db.Model(&ennoblements).Returning("NULL").Insert(); err != nil {
 			return errors.Wrap(err, "couldn't insert ennoblements")
 		}
 	}
