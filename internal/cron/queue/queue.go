@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	MainQueue         = "main"
-	EnnoblementsQueue = "ennoblements"
+	Main         = "main"
+	Ennoblements = "ennoblements"
 )
 
 type Queue interface {
@@ -46,8 +46,8 @@ func New(cfg *Config) (Queue, error) {
 
 func (q *queue) init(cfg *Config) error {
 	q.factory = redisq.NewFactory()
-	q.mainQueue = q.registerQueue(MainQueue, cfg.WorkerLimit)
-	q.ennoblementsQueue = q.registerQueue(EnnoblementsQueue, cfg.WorkerLimit)
+	q.mainQueue = q.registerQueue(Main, cfg.WorkerLimit)
+	q.ennoblementsQueue = q.registerQueue(Ennoblements, cfg.WorkerLimit)
 
 	return nil
 }
@@ -64,9 +64,9 @@ func (q *queue) registerQueue(name string, limit int) taskq.Queue {
 
 func (q *queue) getQueueByName(name string) taskq.Queue {
 	switch name {
-	case MainQueue:
+	case Main:
 		return q.mainQueue
-	case EnnoblementsQueue:
+	case Ennoblements:
 		return q.ennoblementsQueue
 	}
 	return nil

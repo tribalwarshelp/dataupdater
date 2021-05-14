@@ -1,4 +1,4 @@
-package tasks
+package task
 
 import (
 	"context"
@@ -29,8 +29,8 @@ func (t *taskUpdateEnnoblements) execute() error {
 	for _, server := range servers {
 		s := server
 		err := t.queue.Add(
-			queue.EnnoblementsQueue,
-			Get(TaskUpdateServerEnnoblements).
+			queue.Ennoblements,
+			Get(UpdateServerEnnoblements).
 				WithArgs(context.Background(), twurlbuilder.BuildServerURL(server.Key, server.Version.Host), s),
 		)
 		if err != nil {
@@ -39,7 +39,7 @@ func (t *taskUpdateEnnoblements) execute() error {
 					err,
 					"taskUpdateEnnoblements.execute: %s: Couldn't add the task '%s' for this server",
 					server.Key,
-					TaskUpdateServerEnnoblements,
+					UpdateServerEnnoblements,
 				),
 			)
 		}

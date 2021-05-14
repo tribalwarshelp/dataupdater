@@ -1,4 +1,4 @@
-package tasks
+package task
 
 import (
 	"context"
@@ -32,8 +32,8 @@ func (t *taskDeleteNonExistentVillages) execute() error {
 	for _, server := range servers {
 		s := server
 		err := t.queue.Add(
-			queue.MainQueue,
-			Get(TaskNameServerDeleteNonExistentVillages).
+			queue.Main,
+			Get(ServerDeleteNonExistentVillages).
 				WithArgs(
 					context.Background(),
 					twurlbuilder.BuildServerURL(server.Key, server.Version.Host),
@@ -46,7 +46,7 @@ func (t *taskDeleteNonExistentVillages) execute() error {
 					err,
 					"taskDeleteNonExistentVillages.execute: %s: Couldn't add the task '%s' for this server",
 					server.Key,
-					TaskNameServerDeleteNonExistentVillages,
+					ServerDeleteNonExistentVillages,
 				),
 			)
 		}

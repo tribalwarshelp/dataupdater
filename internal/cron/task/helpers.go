@@ -1,4 +1,4 @@
-package tasks
+package task
 
 import (
 	"github.com/tribalwarshelp/shared/tw/twdataloader"

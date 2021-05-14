@@ -1,4 +1,4 @@
-package tasks
+package task
 
 import (
 	"context"
@@ -44,14 +44,14 @@ func (t *taskUpdateStats) execute(timezone string) error {
 		Info("taskUpdateStats.execute: Update of the stats has started")
 	for _, server := range servers {
 		s := server
-		err := t.queue.Add(queue.MainQueue, Get(TaskUpdateServerStats).WithArgs(context.Background(), timezone, s))
+		err := t.queue.Add(queue.Main, Get(UpdateServerStats).WithArgs(context.Background(), timezone, s))
 		if err != nil {
 			log.Warn(
 				errors.Wrapf(
 					err,
 					"taskUpdateStats.execute: %s: Couldn't add the task '%s' for this server",
 					server.Key,
-					TaskUpdateServerStats,
+					UpdateServerStats,
 				),
 			)
 		}

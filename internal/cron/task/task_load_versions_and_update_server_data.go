@@ -1,4 +1,4 @@
-package tasks
+package task
 
 import (
 	"context"
@@ -21,7 +21,7 @@ func (t *taskLoadVersionsAndUpdateServerData) execute() error {
 		return err
 	}
 	for _, version := range versions {
-		t.queue.Add(queue.MainQueue, Get(TaskNameLoadServersAndUpdateData).WithArgs(context.Background(), version))
+		t.queue.Add(queue.Main, Get(LoadServersAndUpdateData).WithArgs(context.Background(), version))
 	}
 	log.Debug("taskLoadVersionsAndUpdateServerData.execute: Versions have been loaded")
 	return nil

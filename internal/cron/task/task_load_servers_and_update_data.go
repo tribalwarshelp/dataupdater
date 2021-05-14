@@ -1,4 +1,4 @@
-package tasks
+package task
 
 import (
 	"context"
@@ -85,7 +85,7 @@ func (t *taskLoadServersAndUpdateData) execute(version *twmodel.Version) error {
 	}
 
 	for _, server := range servers {
-		t.queue.Add(queue.MainQueue, Get(TaskNameUpdateServerData).WithArgs(context.Background(), server.url, server.Server))
+		t.queue.Add(queue.Main, Get(UpdateServerData).WithArgs(context.Background(), server.url, server.Server))
 	}
 
 	entry.Infof("%s: Servers have been loaded", version.Host)
