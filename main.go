@@ -17,7 +17,6 @@ import (
 	"github.com/tribalwarshelp/cron/internal/postgres"
 
 	"github.com/joho/godotenv"
-	"github.com/robfig/cron/v3"
 )
 
 func init() {
@@ -53,13 +52,6 @@ func main() {
 		RunOnInit:   envutil.GetenvBool("RUN_ON_INIT"),
 		Redis:       redisClient,
 		WorkerLimit: envutil.GetenvInt("WORKER_LIMIT"),
-		Opts: []cron.Option{
-			cron.WithChain(
-				cron.SkipIfStillRunning(
-					cron.PrintfLogger(logrus.WithField("package", "cron")),
-				),
-			),
-		},
 	})
 	if err != nil {
 		logrus.Fatal(err)

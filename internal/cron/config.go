@@ -4,14 +4,12 @@ import (
 	"github.com/go-pg/pg/v10"
 	"github.com/go-redis/redis/v8"
 	"github.com/pkg/errors"
-	"github.com/robfig/cron/v3"
 )
 
 type Config struct {
 	DB          *pg.DB
 	Redis       redis.UniversalClient
 	RunOnInit   bool
-	Opts        []cron.Option
 	WorkerLimit int
 }
 

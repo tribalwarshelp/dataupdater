@@ -30,12 +30,17 @@ func New(cfg *Config) (*Cron, error) {
 	if err != nil {
 		return nil, err
 	}
+	log := logrus.WithField("package", "internal/cron")
 	c := &Cron{
-		Cron:      cron.New(cfg.Opts...),
+		Cron: cron.New(cron.WithChain(
+			cron.SkipIfStillRunning(
+				cron.PrintfLogger(log),
+			),
+		)),
 		queue:     q,
 		db:        cfg.DB,
 		runOnInit: cfg.RunOnInit,
-		log:       logrus.WithField("package", "internal/cron"),
+		log:       log,
 	}
 	if err := c.init(); err != nil {
 		return nil, err
