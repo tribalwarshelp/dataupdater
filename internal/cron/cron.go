@@ -51,7 +51,7 @@ func New(cfg *Config) (*Cron, error) {
 func (c *Cron) init() error {
 	var versions []*twmodel.Version
 	if err := c.db.Model(&versions).DistinctOn("timezone").Select(); err != nil {
-		return errors.Wrap(err, "Cron.init: couldn't load versions")
+		return errors.Wrap(err, "couldn't load versions")
 	}
 
 	var updateHistoryFuncs []func()
@@ -99,7 +99,7 @@ func (c *Cron) init() error {
 
 func (c *Cron) Start(ctx context.Context) error {
 	if err := c.queue.Start(ctx); err != nil {
-		return errors.Wrap(err, "Cron.Start")
+		return err
 	}
 	c.Cron.Start()
 	return nil
@@ -108,7 +108,7 @@ func (c *Cron) Start(ctx context.Context) error {
 func (c *Cron) Stop() error {
 	c.Cron.Stop()
 	if err := c.queue.Close(); err != nil {
-		return errors.Wrap(err, "Cron.Stop")
+		return err
 	}
 	return nil
 }
@@ -172,14 +172,14 @@ func initializeQueue(cfg *Config) (queue.Queue, error) {
 		Redis:       cfg.Redis,
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "initializeQueue: Couldn't create the task queue")
+		return nil, errors.Wrap(err, "couldn't initialize a queue")
 	}
 	err = task.RegisterTasks(&task.Config{
 		DB:    cfg.DB,
 		Queue: q,
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "initializeQueue: Couldn't create the task queue")
+		return nil, errors.Wrap(err, "couldn't register tasks")
 	}
 	return q, nil
 }

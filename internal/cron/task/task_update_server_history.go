@@ -13,7 +13,7 @@ type taskUpdateServerHistory struct {
 
 func (t *taskUpdateServerHistory) execute(timezone string, server *twmodel.Server) error {
 	if err := t.validatePayload(server); err != nil {
-		log.Debug(err)
+		log.Debug(errors.Wrap(err, "taskUpdateServerHistory.execute"))
 		return nil
 	}
 	location, err := t.loadLocation(timezone)
@@ -23,7 +23,7 @@ func (t *taskUpdateServerHistory) execute(timezone string, server *twmodel.Serve
 		return err
 	}
 	entry := log.WithField("key", server.Key)
-	entry.Infof("taskUpdateServerHistory.execute: %s: update of the history has started...", server.Key)
+	entry.Infof("taskUpdateServerHistory.execute: %s: Update of the server history has started...", server.Key)
 	err = (&workerUpdateServerHistory{
 		db:       t.db.WithParam("SERVER", pg.Safe(server.Key)),
 		server:   server,
@@ -34,14 +34,14 @@ func (t *taskUpdateServerHistory) execute(timezone string, server *twmodel.Serve
 		entry.Error(err)
 		return err
 	}
-	entry.Infof("taskUpdateServerHistory.execute: %s: history has been updated", server.Key)
+	entry.Infof("taskUpdateServerHistory.execute: %s: The server history has been updated", server.Key)
 
 	return nil
 }
 
 func (t *taskUpdateServerHistory) validatePayload(server *twmodel.Server) error {
 	if server == nil {
-		return errors.New("taskUpdateServerHistory.validatePayload: Expected *twmodel.Server, got nil")
+		return errors.New("expected *twmodel.Server, got nil")
 	}
 
 	return nil

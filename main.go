@@ -54,10 +54,10 @@ func main() {
 		WorkerLimit: envutil.GetenvInt("WORKER_LIMIT"),
 	})
 	if err != nil {
-		logrus.Fatal(err)
+		logrus.Fatal(errors.Wrap(err, "Couldn't initialize a cron instance"))
 	}
 	if err := c.Start(context.Background()); err != nil {
-		logrus.Fatal(err)
+		logrus.Fatal(errors.Wrap(err, "Couldn't start the cron"))
 	}
 
 	logrus.Info("Cron is up and running!")

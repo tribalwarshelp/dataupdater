@@ -23,7 +23,7 @@ type serverWithURL struct {
 
 func (t *taskLoadServersAndUpdateData) execute(version *twmodel.Version) error {
 	if err := t.validatePayload(version); err != nil {
-		log.Debug(err)
+		log.Debug(errors.Wrap(err, "taskLoadServersAndUpdateData.execute"))
 		return nil
 	}
 	entry := log.WithField("host", version.Host)
@@ -52,7 +52,7 @@ func (t *taskLoadServersAndUpdateData) execute(version *twmodel.Version) error {
 			Version:     version,
 		}
 		if err := postgres.CreateSchema(t.db, server); err != nil {
-			logrus.Warn(errors.Wrapf(err, "taskLoadServersAndUpdateData.execute: %s: couldn't create the schema", server.Key))
+			logrus.Warn(errors.Wrapf(err, "taskLoadServersAndUpdateData.execute: %s: Couldn't create the schema", server.Key))
 			continue
 		}
 		servers = append(servers, &serverWithURL{
@@ -69,7 +69,7 @@ func (t *taskLoadServersAndUpdateData) execute(version *twmodel.Version) error {
 			Set("version_code = EXCLUDED.version_code").
 			Returning("*").
 			Insert(); err != nil {
-			err = errors.Wrap(err, "taskLoadServersAndUpdateData.execute: couldn't insert/update servers")
+			err = errors.Wrap(err, "taskLoadServersAndUpdateData.execute: Couldn't insert/update servers")
 			logrus.Error(err)
 			return err
 		}
@@ -79,22 +79,34 @@ func (t *taskLoadServersAndUpdateData) execute(version *twmodel.Version) error {
 		Set("status = ?", twmodel.ServerStatusClosed).
 		Where("key NOT IN (?) AND version_code = ?", pg.In(serverKeys), version.Code).
 		Update(); err != nil {
-		err = errors.Wrap(err, "taskLoadServersAndUpdateData.execute: couldn't update server statuses")
+		err = errors.Wrap(err, "taskLoadServersAndUpdateData.execute: Couldn't update server statuses")
 		logrus.Error(err)
 		return err
 	}
 
+	entry.Infof("%s: Servers have been loaded", version.Host)
 	for _, server := range servers {
-		t.queue.Add(queue.Main, Get(UpdateServerData).WithArgs(context.Background(), server.url, server.Server))
+		err := t.queue.Add(queue.Main, Get(UpdateServerData).WithArgs(context.Background(), server.url, server.Server))
+		if err != nil {
+			log.
+				WithField("key", server.Key).
+				Warn(
+					errors.Wrapf(
+						err,
+						"taskLoadServersAndUpdateData.execute: %s: Couldn't add the task '%s' for this server",
+						server.Key,
+						UpdateServerData,
+					),
+				)
+		}
 	}
 
-	entry.Infof("%s: Servers have been loaded", version.Host)
 	return nil
 }
 
 func (t *taskLoadServersAndUpdateData) validatePayload(version *twmodel.Version) error {
 	if version == nil {
-		return errors.New("taskLoadServersAndUpdateData.validatePayload: Expected *twmodel.Version, got nil")
+		return errors.New("expected *twmodel.Version, got nil")
 	}
 	return nil
 }

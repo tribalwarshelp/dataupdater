@@ -43,17 +43,18 @@ func (t *taskUpdateStats) execute(timezone string) error {
 		WithField("numberOfServers", len(servers)).
 		Info("taskUpdateStats.execute: Update of the stats has started")
 	for _, server := range servers {
-		s := server
-		err := t.queue.Add(queue.Main, Get(UpdateServerStats).WithArgs(context.Background(), timezone, s))
+		err := t.queue.Add(queue.Main, Get(UpdateServerStats).WithArgs(context.Background(), timezone, server))
 		if err != nil {
-			log.Warn(
-				errors.Wrapf(
-					err,
-					"taskUpdateStats.execute: %s: Couldn't add the task '%s' for this server",
-					server.Key,
-					UpdateServerStats,
-				),
-			)
+			log.
+				WithField("key", server.Key).
+				Warn(
+					errors.Wrapf(
+						err,
+						"taskUpdateStats.execute: %s: Couldn't add the task '%s' for this server",
+						server.Key,
+						UpdateServerStats,
+					),
+				)
 		}
 	}
 	return nil

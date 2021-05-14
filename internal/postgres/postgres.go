@@ -28,7 +28,7 @@ func Connect(cfg *Config) (*pg.DB, error) {
 	}
 
 	if err := prepareDB(db); err != nil {
-		return nil, errors.Wrap(err, "Connect")
+		return nil, err
 	}
 
 	return db, nil
@@ -47,11 +47,11 @@ func prepareOptions() *pg.Options {
 func prepareDB(db *pg.DB) error {
 	tx, err := db.Begin()
 	if err != nil {
-		return errors.Wrap(err, "Couldn't start a transaction")
+		return errors.Wrap(err, "couldn't start a transaction")
 	}
 	defer func() {
 		if err := tx.Close(); err != nil {
-			log.Warn(errors.Wrap(err, "prepareDB: Couldn't rollback the transaction"))
+			log.Warn(errors.Wrap(err, "prepareDB: couldn't rollback the transaction"))
 		}
 	}()
 
@@ -68,7 +68,7 @@ func prepareDB(db *pg.DB) error {
 			IfNotExists: true,
 		})
 		if err != nil {
-			return errors.Wrap(err, "Couldn't create the table")
+			return errors.Wrap(err, "couldn't create the table")
 		}
 	}
 
@@ -96,17 +96,17 @@ func prepareDB(db *pg.DB) error {
 		},
 	} {
 		if _, err := tx.Exec(s.statement, s.params...); err != nil {
-			return errors.Wrap(err, "Couldn't initialize the db")
+			return errors.Wrap(err, "couldn't prepare the db")
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		return errors.Wrap(err, "Couldn't commit changes")
+		return errors.Wrap(err, "couldn't commit changes")
 	}
 
 	var servers []*twmodel.Server
 	if err := db.Model(&servers).Select(); err != nil {
-		return errors.Wrap(err, "Couldn't load servers")
+		return errors.Wrap(err, "couldn't load servers")
 	}
 
 	for _, server := range servers {
@@ -141,7 +141,7 @@ func createSchema(db *pg.DB, server *twmodel.Server, init bool) error {
 
 	tx, err := db.WithParam("SERVER", pg.Safe(server.Key)).Begin()
 	if err != nil {
-		return errors.Wrap(err, "CreateSchema: couldn't start a transaction")
+		return errors.Wrap(err, "couldn't start a transaction")
 	}
 	defer func() {
 		if err := tx.Close(); err != nil {
@@ -150,7 +150,7 @@ func createSchema(db *pg.DB, server *twmodel.Server, init bool) error {
 	}()
 
 	if _, err := tx.Exec(fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s", server.Key)); err != nil {
-		return errors.Wrap(err, "CreateSchema: couldn't create the schema")
+		return errors.Wrap(err, "couldn't create for the server '"+server.Key+"'")
 	}
 
 	dbModels := []interface{}{
@@ -185,12 +185,12 @@ func createSchema(db *pg.DB, server *twmodel.Server, init bool) error {
 	}
 	for _, statement := range statements {
 		if _, err := tx.Exec(statement, pg.Safe(server.Key), server.VersionCode); err != nil {
-			return errors.Wrap(err, "CreateSchema: couldn't initialize the schema")
+			return errors.Wrap(err, "couldn't initialize the schema")
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		return errors.Wrap(err, "CreateSchema: couldn't commit changes")
+		return errors.Wrap(err, "couldn't commit changes")
 	}
 	return nil
 }

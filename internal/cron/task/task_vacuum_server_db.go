@@ -17,11 +17,11 @@ type taskVacuumServerDB struct {
 
 func (t *taskVacuumServerDB) execute(server *twmodel.Server) error {
 	if err := t.validatePayload(server); err != nil {
-		log.Debug(err)
+		log.Debug(errors.Wrap(err, "taskVacuumServerDB.execute"))
 		return nil
 	}
 	entry := log.WithField("key", server.Key)
-	entry.Infof("taskVacuumServerDB.execute: %s: vacumming the database...", server.Key)
+	entry.Infof("taskVacuumServerDB.execute: %s: Vacumming the database...", server.Key)
 	err := (&workerVacuumServerDB{
 		db:     t.db.WithParam("SERVER", pg.Safe(server.Key)),
 		server: server,
@@ -31,14 +31,14 @@ func (t *taskVacuumServerDB) execute(server *twmodel.Server) error {
 		entry.Error(err)
 		return err
 	}
-	entry.Infof("taskVacuumServerDB.execute: %s: the database has been vacummed", server.Key)
+	entry.Infof("taskVacuumServerDB.execute: %s: The database has been vacummed", server.Key)
 
 	return nil
 }
 
 func (t *taskVacuumServerDB) validatePayload(server *twmodel.Server) error {
 	if server == nil {
-		return errors.New("taskVacuumServerDB.validatePayload: Expected *twmodel.Server, got nil")
+		return errors.New("expected *twmodel.Server, got nil")
 	}
 
 	return nil

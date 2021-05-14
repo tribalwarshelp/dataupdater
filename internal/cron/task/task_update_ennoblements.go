@@ -27,21 +27,22 @@ func (t *taskUpdateEnnoblements) execute() error {
 	}
 	log.WithField("numberOfServers", len(servers)).Info("taskUpdateEnnoblements.execute: Update of the ennoblements has started...")
 	for _, server := range servers {
-		s := server
 		err := t.queue.Add(
 			queue.Ennoblements,
 			Get(UpdateServerEnnoblements).
-				WithArgs(context.Background(), twurlbuilder.BuildServerURL(server.Key, server.Version.Host), s),
+				WithArgs(context.Background(), twurlbuilder.BuildServerURL(server.Key, server.Version.Host), server),
 		)
 		if err != nil {
-			log.Warn(
-				errors.Wrapf(
-					err,
-					"taskUpdateEnnoblements.execute: %s: Couldn't add the task '%s' for this server",
-					server.Key,
-					UpdateServerEnnoblements,
-				),
-			)
+			log.
+				WithField("key", server.Key).
+				Warn(
+					errors.Wrapf(
+						err,
+						"taskUpdateEnnoblements.execute: %s: Couldn't add the task '%s' for this server",
+						server.Key,
+						UpdateServerEnnoblements,
+					),
+				)
 		}
 	}
 	return nil

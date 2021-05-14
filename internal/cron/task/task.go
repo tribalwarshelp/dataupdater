@@ -43,7 +43,7 @@ func (t *task) loadLocation(timezone string) (*time.Location, error) {
 	}
 	location, err := time.LoadLocation(timezone)
 	if err != nil {
-		return nil, errors.Wrap(err, "task.loadLocation")
+		return nil, errors.Wrap(err, "couldn't load location for the timezone '"+timezone+"'")
 	}
 	t.cachedLocations.Store(timezone, location)
 	return location, nil
@@ -51,7 +51,7 @@ func (t *task) loadLocation(timezone string) (*time.Location, error) {
 
 func RegisterTasks(cfg *Config) error {
 	if err := validateConfig(cfg); err != nil {
-		return errors.Wrap(err, "RegisterTasks")
+		return errors.Wrap(err, "config is invalid")
 	}
 
 	t := &task{

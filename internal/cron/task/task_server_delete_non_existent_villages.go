@@ -13,7 +13,7 @@ type taskServerDeleteNonExistentVillages struct {
 
 func (t *taskServerDeleteNonExistentVillages) execute(url string, server *twmodel.Server) error {
 	if err := t.validatePayload(server); err != nil {
-		log.Debug(err)
+		log.Debug(errors.Wrap(err, "taskServerDeleteNonExistentVillages.execute"))
 		return nil
 	}
 	entry := log.WithField("key", server.Key)
@@ -34,7 +34,7 @@ func (t *taskServerDeleteNonExistentVillages) execute(url string, server *twmode
 
 func (t *taskServerDeleteNonExistentVillages) validatePayload(server *twmodel.Server) error {
 	if server == nil {
-		return errors.New("taskUpdateServerData.validatePayload: Expected *twmodel.Server, got nil")
+		return errors.New("expected *twmodel.Server, got nil")
 	}
 
 	return nil
@@ -49,7 +49,7 @@ type workerDeleteNonExistentVillages struct {
 func (w *workerDeleteNonExistentVillages) delete() error {
 	villages, err := w.dataloader.LoadVillages()
 	if err != nil {
-		return errors.Wrap(err, "workerDeleteNonExistentVillages.delete")
+		return errors.Wrap(err, "couldn't load villages")
 	}
 	var idsToDelete []int
 	searchableByVillageID := &villagesSearchableByID{villages}
@@ -63,17 +63,17 @@ func (w *workerDeleteNonExistentVillages) delete() error {
 			}
 			return nil
 		}); err != nil {
-		return errors.Wrap(err, "workerDeleteNonExistentVillages.delete")
+		return errors.Wrap(err, "couldn't determine which villages should be deleted")
 	}
 
 	totalDeleted := 0
 	if len(idsToDelete) > 0 {
 		result, err := w.db.Model(&twmodel.Village{}).Where("id = ANY(?)", pg.Array(idsToDelete)).Delete()
 		if err != nil {
-			return errors.Wrap(err, "workerDeleteNonExistentVillages.delete")
+			return errors.Wrap(err, "couldn't delete villages that don't exist")
 		}
 		totalDeleted = result.RowsAffected()
 	}
-	log.Debugf("%s: deleted %d villages", w.server.Key, totalDeleted)
+	log.WithField("key", w.server.Key).Debugf("%s: deleted %d villages", w.server.Key, totalDeleted)
 	return nil
 }

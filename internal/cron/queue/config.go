@@ -12,7 +12,7 @@ type Config struct {
 
 func validateConfig(cfg *Config) error {
 	if cfg == nil || cfg.Redis == nil {
-		return errors.New("validateConfig: cfg.Redis is required")
+		return errors.New("cfg.Redis is required")
 	}
 	return nil
 }

@@ -15,10 +15,10 @@ type Config struct {
 
 func validateConfig(cfg *Config) error {
 	if cfg == nil || cfg.DB == nil {
-		return errors.New("validateConfig: cfg.DB is required")
+		return errors.New("cfg.DB is required")
 	}
 	if cfg.Redis == nil {
-		return errors.New("validateConfig: cfg.Redis is required")
+		return errors.New("cfg.Redis is required")
 	}
 	return nil
 }

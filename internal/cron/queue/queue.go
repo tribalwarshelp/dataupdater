@@ -74,14 +74,14 @@ func (q *queue) getQueueByName(name string) taskq.Queue {
 
 func (q *queue) Start(ctx context.Context) error {
 	if err := q.factory.StartConsumers(ctx); err != nil {
-		return errors.Wrap(err, "Couldn't start the queue")
+		return errors.Wrap(err, "couldn't start the queue")
 	}
 	return nil
 }
 
 func (q *queue) Close() error {
 	if err := q.factory.Close(); err != nil {
-		return errors.Wrap(err, "Couldn't close the queue")
+		return errors.Wrap(err, "couldn't close the queue")
 	}
 	return nil
 }
@@ -89,10 +89,10 @@ func (q *queue) Close() error {
 func (q *queue) Add(name string, msg *taskq.Message) error {
 	queue := q.getQueueByName(name)
 	if queue == nil {
-		return errors.Errorf("Couldn't add the message to the queue: unknown queue name '%s'", name)
+		return errors.Errorf("couldn't add the message to the queue: unknown queue name '%s'", name)
 	}
 	if err := queue.Add(msg); err != nil {
-		return errors.Wrap(err, "Couldn't add the message to the queue")
+		return errors.Wrap(err, "couldn't add the message to the queue")
 	}
 	return nil
 }

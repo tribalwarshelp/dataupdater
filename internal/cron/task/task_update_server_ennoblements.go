@@ -13,7 +13,7 @@ type taskUpdateServerEnnoblements struct {
 
 func (t *taskUpdateServerEnnoblements) execute(url string, server *twmodel.Server) error {
 	if err := t.validatePayload(server); err != nil {
-		log.Debug(err)
+		log.Debug(errors.Wrap(err, "taskUpdateServerEnnoblements.execute"))
 		return nil
 	}
 	entry := log.WithField("key", server.Key)
@@ -27,14 +27,14 @@ func (t *taskUpdateServerEnnoblements) execute(url string, server *twmodel.Serve
 		entry.Error(err)
 		return err
 	}
-	entry.Debugf("%s: ennoblements have been updated", server.Key)
+	entry.Debugf("%s: the ennoblements have been updated", server.Key)
 
 	return nil
 }
 
 func (t *taskUpdateServerEnnoblements) validatePayload(server *twmodel.Server) error {
 	if server == nil {
-		return errors.Errorf("taskUpdateServerEnnoblements.validatePayload: Expected *twmodel.Server, got nil")
+		return errors.Errorf("expected *twmodel.Server, got nil")
 	}
 
 	return nil

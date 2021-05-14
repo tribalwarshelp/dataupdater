@@ -30,25 +30,26 @@ func (t *taskDeleteNonExistentVillages) execute() error {
 		WithField("numberOfServers", len(servers)).
 		Info("taskDeleteNonExistentVillages.execute: Servers have been loaded and added to the queue")
 	for _, server := range servers {
-		s := server
 		err := t.queue.Add(
 			queue.Main,
 			Get(ServerDeleteNonExistentVillages).
 				WithArgs(
 					context.Background(),
 					twurlbuilder.BuildServerURL(server.Key, server.Version.Host),
-					s,
+					server,
 				),
 		)
 		if err != nil {
-			log.Warn(
-				errors.Wrapf(
-					err,
-					"taskDeleteNonExistentVillages.execute: %s: Couldn't add the task '%s' for this server",
-					server.Key,
-					ServerDeleteNonExistentVillages,
-				),
-			)
+			log.
+				WithField("key", server.Key).
+				Warn(
+					errors.Wrapf(
+						err,
+						"taskDeleteNonExistentVillages.execute: %s: Couldn't add the task '%s' for this server",
+						server.Key,
+						ServerDeleteNonExistentVillages,
+					),
+				)
 		}
 	}
 	return nil

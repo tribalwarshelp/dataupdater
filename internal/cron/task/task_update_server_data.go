@@ -16,7 +16,7 @@ type taskUpdateServerData struct {
 
 func (t *taskUpdateServerData) execute(url string, server *twmodel.Server) error {
 	if err := t.validatePayload(server); err != nil {
-		log.Debug(err)
+		log.Debug(errors.Wrap(err, "taskUpdateServerData.execute"))
 		return nil
 	}
 	now := time.Now()
@@ -38,13 +38,13 @@ func (t *taskUpdateServerData) execute(url string, server *twmodel.Server) error
 			"duration":       duration.Nanoseconds(),
 			"durationPretty": duration.String(),
 		}).
-		Infof("taskUpdateServerData.execute: %s: data has been updated", server.Key)
+		Infof("taskUpdateServerData.execute: %s: the server data has been updated", server.Key)
 	return nil
 }
 
 func (t *taskUpdateServerData) validatePayload(server *twmodel.Server) error {
 	if server == nil {
-		return errors.New("taskUpdateServerData.validatePayload: Expected *twmodel.Server, got nil")
+		return errors.New("expected *twmodel.Server, got nil")
 	}
 
 	return nil
@@ -71,8 +71,9 @@ func (w *workerUpdateServerData) loadPlayers(od map[int]*twmodel.OpponentsDefeat
 		Model(&ennoblements).
 		DistinctOn("new_owner_id").
 		Order("new_owner_id ASC", "ennobled_at ASC").
+		Column("ennobled_at", "new_owner_id").
 		Select(); err != nil {
-		return result, errors.Wrap(err, "workerUpdateServerData.loadPlayers: couldn't load ennoblements")
+		return result, errors.Wrap(err, "couldn't load ennoblements")
 	}
 
 	var err error
@@ -118,7 +119,7 @@ func (w *workerUpdateServerData) loadPlayers(od map[int]*twmodel.OpponentsDefeat
 			}
 			return nil
 		}); err != nil {
-		return result, errors.Wrap(err, "workerUpdateServerData.loadPlayers: Players that have been deleted couldn't be detected")
+		return result, errors.Wrap(err, "couldn't determine which players should be deleted")
 	}
 
 	return result, nil
@@ -136,7 +137,7 @@ func (w *workerUpdateServerData) loadTribes(od map[int]*twmodel.OpponentsDefeate
 	result := loadTribesResult{}
 	result.tribes, err = w.dataloader.LoadTribes()
 	if err != nil {
-		return result, errors.Wrap(err, "workerUpdateServerData.loadTribes")
+		return result, err
 	}
 
 	result.numberOfTribes = len(result.tribes)
@@ -165,7 +166,7 @@ func (w *workerUpdateServerData) loadTribes(od map[int]*twmodel.OpponentsDefeate
 			}
 			return nil
 		}); err != nil {
-		return result, errors.Wrap(err, "workerUpdateServerData.loadTribes: Tribes that have been deleted couldn't be detected")
+		return result, errors.Wrap(err, "couldn't determine which tribes should be deleted")
 	}
 
 	return result, nil
@@ -238,43 +239,43 @@ func (w *workerUpdateServerData) calculateDailyPlayerStats(
 func (w *workerUpdateServerData) update() error {
 	pod, err := w.dataloader.LoadOD(false)
 	if err != nil {
-		return errors.Wrap(err, "workerUpdateServerData.update")
+		return errors.Wrap(err, "couldn't load players OD")
 	}
 
 	tod, err := w.dataloader.LoadOD(true)
 	if err != nil {
-		return errors.Wrap(err, "workerUpdateServerData.update")
+		return errors.Wrap(err, "couldn't load tribes OD")
 	}
 
 	villages, err := w.dataloader.LoadVillages()
 	if err != nil {
-		return errors.Wrap(err, "workerUpdateServerData.update")
+		return errors.Wrap(err, "couldn't load villages")
 	}
 	numberOfVillages := len(villages)
 
 	tribesResult, err := w.loadTribes(tod, countPlayerVillages(villages))
 	if err != nil {
-		return errors.Wrap(err, "workerUpdateServerData.update")
+		return errors.Wrap(err, "couldn't load tribes")
 	}
 
 	playersResult, err := w.loadPlayers(pod)
 	if err != nil {
-		return errors.Wrap(err, "workerUpdateServerData.update")
+		return errors.Wrap(err, "couldn't load players")
 	}
 
 	cfg, err := w.dataloader.GetConfig()
 	if err != nil {
-		return errors.Wrap(err, "workerUpdateServerData.update")
+		return errors.Wrap(err, "couldn't load server config")
 	}
 
 	buildingCfg, err := w.dataloader.GetBuildingConfig()
 	if err != nil {
-		return errors.Wrap(err, "workerUpdateServerData.update")
+		return errors.Wrap(err, "couldn't load building config")
 	}
 
 	unitCfg, err := w.dataloader.GetUnitConfig()
 	if err != nil {
-		return errors.Wrap(err, "workerUpdateServerData.update")
+		return errors.Wrap(err, "couldn't load unit config")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)

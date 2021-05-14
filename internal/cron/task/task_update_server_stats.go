@@ -13,7 +13,7 @@ type taskUpdateServerStats struct {
 
 func (t *taskUpdateServerStats) execute(timezone string, server *twmodel.Server) error {
 	if err := t.validatePayload(server); err != nil {
-		log.Debug(err)
+		log.Debug(errors.Wrap(err, "taskUpdateServerStats.execute"))
 		return nil
 	}
 	location, err := t.loadLocation(timezone)
@@ -23,7 +23,7 @@ func (t *taskUpdateServerStats) execute(timezone string, server *twmodel.Server)
 		return err
 	}
 	entry := log.WithField("key", server.Key)
-	entry.Infof("taskUpdateServerStats.execute: %s: update of the stats has started...", server.Key)
+	entry.Infof("taskUpdateServerStats.execute: %s: Update of the server stats has started...", server.Key)
 	err = (&workerUpdateServerStats{
 		db:       t.db.WithParam("SERVER", pg.Safe(server.Key)),
 		server:   server,
@@ -34,14 +34,14 @@ func (t *taskUpdateServerStats) execute(timezone string, server *twmodel.Server)
 		entry.Error(err)
 		return err
 	}
-	entry.Infof("taskUpdateServerStats.execute: %s: stats have been updated", server.Key)
+	entry.Infof("taskUpdateServerStats.execute: %s: The server stats have been updated", server.Key)
 
 	return nil
 }
 
 func (t *taskUpdateServerStats) validatePayload(server *twmodel.Server) error {
 	if server == nil {
-		return errors.New("taskUpdateServerStats.validatePayload: Expected *twmodel.Server, got nil")
+		return errors.New("expected *twmodel.Server, got nil")
 	}
 
 	return nil
@@ -56,39 +56,39 @@ type workerUpdateServerStats struct {
 func (w *workerUpdateServerStats) prepare() (*twmodel.ServerStats, error) {
 	activePlayers, err := w.db.Model(&twmodel.Player{}).Where("exists = true").Count()
 	if err != nil {
-		return nil, errors.Wrap(err, "cannot count active players")
+		return nil, errors.Wrap(err, "couldn't count active players")
 	}
 	inactivePlayers, err := w.db.Model(&twmodel.Player{}).Where("exists = false").Count()
 	if err != nil {
-		return nil, errors.Wrap(err, "cannot count inactive players")
+		return nil, errors.Wrap(err, "couldn't count inactive players")
 	}
 	players := activePlayers + inactivePlayers
 
 	activeTribes, err := w.db.Model(&twmodel.Tribe{}).Where("exists = true").Count()
 	if err != nil {
-		return nil, errors.Wrap(err, "cannot count active tribes")
+		return nil, errors.Wrap(err, "couldn't count active tribes")
 	}
 	inactiveTribes, err := w.db.Model(&twmodel.Tribe{}).Where("exists = false").Count()
 	if err != nil {
-		return nil, errors.Wrap(err, "cannot count inactive tribes")
+		return nil, errors.Wrap(err, "couldn't count inactive tribes")
 	}
 	tribes := activeTribes + inactiveTribes
 
 	barbarianVillages, err := w.db.Model(&twmodel.Village{}).Where("player_id = 0").Count()
 	if err != nil {
-		return nil, errors.Wrap(err, "cannot count barbarian villages")
+		return nil, errors.Wrap(err, "couldn't count barbarian villages")
 	}
 	bonusVillages, err := w.db.Model(&twmodel.Village{}).Where("bonus <> 0").Count()
 	if err != nil {
-		return nil, errors.Wrap(err, "cannot count bonus villages")
+		return nil, errors.Wrap(err, "couldn't count bonus villages")
 	}
 	playerVillages, err := w.db.Model(&twmodel.Village{}).Where("player_id <> 0").Count()
 	if err != nil {
-		return nil, errors.Wrap(err, "cannot count player villages")
+		return nil, errors.Wrap(err, "couldn't count player villages")
 	}
 	villages, err := w.db.Model(&twmodel.Village{}).Count()
 	if err != nil {
-		return nil, errors.Wrap(err, "cannot count villages")
+		return nil, errors.Wrap(err, "couldn't count villages")
 	}
 
 	now := time.Now().In(w.location)
