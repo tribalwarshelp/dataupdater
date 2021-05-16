@@ -188,20 +188,11 @@ const (
 			FOR EACH ROW
 			EXECUTE PROCEDURE ?0.log_player_name_change();
 
-		DROP TRIGGER IF EXISTS ?0_check_daily_growth ON ?0.players;
-
-		DROP TRIGGER IF EXISTS ?0_check_player_existence ON ?0.players;
-		DROP TRIGGER IF EXISTS ?0_check_tribe_existence ON ?0.tribes;
-
-		DROP TRIGGER IF EXISTS ?0_check_dominance ON ?0.tribes;
-
 		CREATE TRIGGER ?0_update_ennoblement_old_and_new_owner_tribe_id
 			BEFORE INSERT
 			ON ?0.ennoblements
 			FOR EACH ROW
 			EXECUTE PROCEDURE ?0.get_old_and_new_owner_tribe_id();
-
-		DROP TRIGGER IF EXISTS ?0_insert_into_player_to_servers ON ?0.players;
 
 		CREATE TRIGGER ?0_update_most_points_most_villages_best_rank_last_activity
 			BEFORE INSERT OR UPDATE
