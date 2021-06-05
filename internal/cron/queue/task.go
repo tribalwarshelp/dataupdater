@@ -1,14 +1,11 @@
-package task
+package queue
 
 import (
 	"github.com/go-pg/pg/v10"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	"github.com/vmihailenco/taskq/v3"
 	"sync"
 	"time"
-
-	"github.com/tribalwarshelp/cron/internal/cron/queue"
 )
 
 const (
@@ -28,11 +25,9 @@ const (
 	defaultRetryLimit               = 3
 )
 
-var log = logrus.WithField("package", "internal/cron/task")
-
 type task struct {
 	db              *pg.DB
-	queue           queue.Queue
+	queue           Queue
 	cachedLocations sync.Map
 }
 
@@ -49,8 +44,8 @@ func (t *task) loadLocation(timezone string) (*time.Location, error) {
 	return location, nil
 }
 
-func RegisterTasks(cfg *Config) error {
-	if err := validateConfig(cfg); err != nil {
+func registerTasks(cfg *registerTasksConfig) error {
+	if err := validateRegisterTasksConfig(cfg); err != nil {
 		return errors.Wrap(err, "config is invalid")
 	}
 
@@ -124,6 +119,6 @@ func RegisterTasks(cfg *Config) error {
 	return nil
 }
 
-func Get(taskName string) *taskq.Task {
+func GetTask(taskName string) *taskq.Task {
 	return taskq.Tasks.Get(taskName)
 }

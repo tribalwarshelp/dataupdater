@@ -11,7 +11,6 @@ import (
 	"github.com/robfig/cron/v3"
 
 	"github.com/tribalwarshelp/cron/internal/cron/queue"
-	"github.com/tribalwarshelp/cron/internal/cron/task"
 )
 
 type Cron struct {
@@ -114,44 +113,44 @@ func (c *Cron) Stop() error {
 }
 
 func (c *Cron) updateServerData() {
-	err := c.queue.Add(queue.Main, task.Get(task.LoadVersionsAndUpdateServerData).WithArgs(context.Background()))
+	err := c.queue.Add(queue.Main, queue.GetTask(queue.LoadVersionsAndUpdateServerData).WithArgs(context.Background()))
 	if err != nil {
-		c.logError("Cron.updateServerData", task.LoadVersionsAndUpdateServerData, err)
+		c.logError("Cron.updateServerData", queue.LoadVersionsAndUpdateServerData, err)
 	}
 }
 
 func (c *Cron) updateEnnoblements() {
-	err := c.queue.Add(queue.Ennoblements, task.Get(task.UpdateEnnoblements).WithArgs(context.Background()))
+	err := c.queue.Add(queue.Ennoblements, queue.GetTask(queue.UpdateEnnoblements).WithArgs(context.Background()))
 	if err != nil {
-		c.logError("Cron.updateEnnoblements", task.UpdateEnnoblements, err)
+		c.logError("Cron.updateEnnoblements", queue.UpdateEnnoblements, err)
 	}
 }
 
 func (c *Cron) updateHistory(timezone string) {
-	err := c.queue.Add(queue.Main, task.Get(task.UpdateHistory).WithArgs(context.Background(), timezone))
+	err := c.queue.Add(queue.Main, queue.GetTask(queue.UpdateHistory).WithArgs(context.Background(), timezone))
 	if err != nil {
-		c.logError("Cron.updateHistory", task.UpdateHistory, err)
+		c.logError("Cron.updateHistory", queue.UpdateHistory, err)
 	}
 }
 
 func (c *Cron) updateStats(timezone string) {
-	err := c.queue.Add(queue.Main, task.Get(task.UpdateStats).WithArgs(context.Background(), timezone))
+	err := c.queue.Add(queue.Main, queue.GetTask(queue.UpdateStats).WithArgs(context.Background(), timezone))
 	if err != nil {
-		c.logError("Cron.updateStats", task.UpdateStats, err)
+		c.logError("Cron.updateStats", queue.UpdateStats, err)
 	}
 }
 
 func (c *Cron) vacuumDatabase() {
-	err := c.queue.Add(queue.Main, task.Get(task.Vacuum).WithArgs(context.Background()))
+	err := c.queue.Add(queue.Main, queue.GetTask(queue.Vacuum).WithArgs(context.Background()))
 	if err != nil {
-		c.logError("Cron.vacuumDatabase", task.Vacuum, err)
+		c.logError("Cron.vacuumDatabase", queue.Vacuum, err)
 	}
 }
 
 func (c *Cron) deleteNonExistentVillages() {
-	err := c.queue.Add(queue.Main, task.Get(task.DeleteNonExistentVillages).WithArgs(context.Background()))
+	err := c.queue.Add(queue.Main, queue.GetTask(queue.DeleteNonExistentVillages).WithArgs(context.Background()))
 	if err != nil {
-		c.logError("Cron.deleteNonExistentVillages", task.DeleteNonExistentVillages, err)
+		c.logError("Cron.deleteNonExistentVillages", queue.DeleteNonExistentVillages, err)
 	}
 }
 
@@ -170,18 +169,9 @@ func initializeQueue(cfg *Config) (queue.Queue, error) {
 	q, err := queue.New(&queue.Config{
 		WorkerLimit: cfg.WorkerLimit,
 		Redis:       cfg.Redis,
+		DB:          cfg.DB,
 	})
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't initialize a queue")
-	}
-	err = task.RegisterTasks(&task.Config{
-		DB:    cfg.DB,
-		Queue: q,
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't register tasks")
-	}
-	return q, nil
+	return q, errors.Wrap(err, "couldn't initialize a queue")
 }
 
 func createFnWithTimezone(timezone string, fn func(timezone string)) func() {

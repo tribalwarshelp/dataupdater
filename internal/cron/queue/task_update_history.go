@@ -1,12 +1,10 @@
-package task
+package queue
 
 import (
 	"context"
 	"github.com/pkg/errors"
 	"github.com/tribalwarshelp/shared/tw/twmodel"
 	"time"
-
-	"github.com/tribalwarshelp/cron/internal/cron/queue"
 )
 
 type taskUpdateHistory struct {
@@ -43,7 +41,7 @@ func (t *taskUpdateHistory) execute(timezone string) error {
 		WithField("numberOfServers", len(servers)).
 		Info("taskUpdateHistory.execute: Update of the history has started")
 	for _, server := range servers {
-		err := t.queue.Add(queue.Main, Get(UpdateServerHistory).WithArgs(context.Background(), timezone, server))
+		err := t.queue.Add(Main, GetTask(UpdateServerHistory).WithArgs(context.Background(), timezone, server))
 		if err != nil {
 			log.
 				WithField("key", server.Key).

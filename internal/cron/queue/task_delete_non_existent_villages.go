@@ -1,12 +1,10 @@
-package task
+package queue
 
 import (
 	"context"
 	"github.com/pkg/errors"
 	"github.com/tribalwarshelp/shared/tw/twmodel"
 	"github.com/tribalwarshelp/shared/tw/twurlbuilder"
-
-	"github.com/tribalwarshelp/cron/internal/cron/queue"
 )
 
 type taskDeleteNonExistentVillages struct {
@@ -31,8 +29,8 @@ func (t *taskDeleteNonExistentVillages) execute() error {
 		Info("taskDeleteNonExistentVillages.execute: Servers have been loaded and added to the queue")
 	for _, server := range servers {
 		err := t.queue.Add(
-			queue.Main,
-			Get(ServerDeleteNonExistentVillages).
+			Main,
+			GetTask(ServerDeleteNonExistentVillages).
 				WithArgs(
 					context.Background(),
 					twurlbuilder.BuildServerURL(server.Key, server.Version.Host),
