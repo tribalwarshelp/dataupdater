@@ -3,6 +3,7 @@ package queue
 import (
 	"context"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -15,6 +16,8 @@ const (
 	Ennoblements = "ennoblements"
 )
 
+var log = logrus.WithField("package", "internal/cron/queue")
+
 type Queue interface {
 	Start(ctx context.Context) error
 	Close() error
@@ -22,10 +25,10 @@ type Queue interface {
 }
 
 type queue struct {
-	redis             redis.UniversalClient
-	mainQueue         taskq.Queue
-	ennoblementsQueue taskq.Queue
-	factory           taskq.Factory
+	redis        redis.UniversalClient
+	main         taskq.Queue
+	ennoblements taskq.Queue
+	factory      taskq.Factory
 }
 
 func New(cfg *Config) (Queue, error) {
@@ -46,8 +49,16 @@ func New(cfg *Config) (Queue, error) {
 
 func (q *queue) init(cfg *Config) error {
 	q.factory = redisq.NewFactory()
-	q.mainQueue = q.registerQueue(Main, cfg.WorkerLimit)
-	q.ennoblementsQueue = q.registerQueue(Ennoblements, cfg.WorkerLimit)
+	q.main = q.registerQueue(Main, cfg.WorkerLimit)
+	q.ennoblements = q.registerQueue(Ennoblements, cfg.WorkerLimit)
+
+	err := registerTasks(&registerTasksConfig{
+		DB:    cfg.DB,
+		Queue: q,
+	})
+	if err != nil {
+		return errors.Wrapf(err, "couldn't register tasks")
+	}
 
 	return nil
 }
@@ -65,9 +76,9 @@ func (q *queue) registerQueue(name string, limit int) taskq.Queue {
 func (q *queue) getQueueByName(name string) taskq.Queue {
 	switch name {
 	case Main:
-		return q.mainQueue
+		return q.main
 	case Ennoblements:
-		return q.ennoblementsQueue
+		return q.ennoblements
 	}
 	return nil
 }

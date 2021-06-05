@@ -1,4 +1,4 @@
-package task
+package queue
 
 import (
 	"context"
@@ -8,7 +8,6 @@ import (
 	"github.com/tribalwarshelp/shared/tw/twdataloader"
 	"github.com/tribalwarshelp/shared/tw/twmodel"
 
-	"github.com/tribalwarshelp/cron/internal/cron/queue"
 	"github.com/tribalwarshelp/cron/internal/postgres"
 )
 
@@ -86,7 +85,7 @@ func (t *taskLoadServersAndUpdateData) execute(version *twmodel.Version) error {
 
 	entry.Infof("%s: Servers have been loaded", version.Host)
 	for _, server := range servers {
-		err := t.queue.Add(queue.Main, Get(UpdateServerData).WithArgs(context.Background(), server.url, server.Server))
+		err := t.queue.Add(Main, GetTask(UpdateServerData).WithArgs(context.Background(), server.url, server.Server))
 		if err != nil {
 			log.
 				WithField("key", server.Key).

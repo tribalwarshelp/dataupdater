@@ -1,12 +1,10 @@
-package task
+package queue
 
 import (
 	"context"
 	"github.com/pkg/errors"
 	"github.com/tribalwarshelp/shared/tw/twmodel"
 	"github.com/tribalwarshelp/shared/tw/twurlbuilder"
-
-	"github.com/tribalwarshelp/cron/internal/cron/queue"
 )
 
 type taskUpdateEnnoblements struct {
@@ -28,8 +26,8 @@ func (t *taskUpdateEnnoblements) execute() error {
 	log.WithField("numberOfServers", len(servers)).Info("taskUpdateEnnoblements.execute: Update of the ennoblements has started...")
 	for _, server := range servers {
 		err := t.queue.Add(
-			queue.Ennoblements,
-			Get(UpdateServerEnnoblements).
+			Ennoblements,
+			GetTask(UpdateServerEnnoblements).
 				WithArgs(context.Background(), twurlbuilder.BuildServerURL(server.Key, server.Version.Host), server),
 		)
 		if err != nil {

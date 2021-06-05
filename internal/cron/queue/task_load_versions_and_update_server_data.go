@@ -1,11 +1,9 @@
-package task
+package queue
 
 import (
 	"context"
 	"github.com/pkg/errors"
 	"github.com/tribalwarshelp/shared/tw/twmodel"
-
-	"github.com/tribalwarshelp/cron/internal/cron/queue"
 )
 
 type taskLoadVersionsAndUpdateServerData struct {
@@ -22,7 +20,7 @@ func (t *taskLoadVersionsAndUpdateServerData) execute() error {
 	}
 	log.Debug("taskLoadVersionsAndUpdateServerData.execute: Versions have been loaded")
 	for _, version := range versions {
-		err := t.queue.Add(queue.Main, Get(LoadServersAndUpdateData).WithArgs(context.Background(), version))
+		err := t.queue.Add(Main, GetTask(LoadServersAndUpdateData).WithArgs(context.Background(), version))
 		if err != nil {
 			log.
 				WithField("code", version.Code).
