@@ -1,6 +1,4 @@
-# TWHelp cron
-
-Features:
+# tribalwarshelp.com cron
 
 - Adds automatically new servers.
 - Fetches and updates server data (players, tribes, ODA, ODD, ODS, OD, conquers, configs).
@@ -9,6 +7,13 @@ Features:
 
 ## Development
 
+### Prerequisites
+
+1. Golang
+2. PostgreSQL
+3. Redis
+
+### Installation
 **Required ENV variables:**
 
 ```
@@ -29,15 +34,21 @@ LOG_DB_QUERIES=true|false
 WORKER_LIMIT=1
 ```
 
-### Prerequisites
-
-1. Golang
-2. PostgreSQL
-3. Redis
-
-### Installing
-
 1. Clone this repo.
+```
+git clone git@github.com:tribalwarshelp/cron.git
+```
 2. Navigate to the directory where you have cloned this repo.
 3. Set the required env variables directly in your system or create .env.local file.
-4. go run main.go
+4. Run the app.
+```
+go run main.go
+```
+
+## License
+
+Distributed under the MIT License. See ``LICENSE`` for more information.
+
+## Contact
+
+Dawid Wysokiński - [contact@dwysokinski.me](mailto:contact@dwysokinski.me)
