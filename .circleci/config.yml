@@ -27,9 +27,9 @@ jobs:
       - run: |
           docker login -u $DOCKER_LOGIN -p $DOCKER_PASSWORD
       # build the application image
-      - run: docker build -t $DOCKER_LOGIN/twhelp-cron:$CIRCLE_TAG .
+      - run: docker build -t $DOCKER_LOGIN/twhelp-cron:$(echo $CIRCLE_TAG | sed -r 's/^.{1}//') .
       # deploy the image
-      - run: docker push $DOCKER_LOGIN/twhelp-cron:$CIRCLE_TAG
+      - run: docker push $DOCKER_LOGIN/twhelp-cron:$(echo $CIRCLE_TAG | sed -r 's/^.{1}//')
 workflows:
   version: 2
   deploy_latest:
