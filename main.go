@@ -38,7 +38,7 @@ func main() {
 		}
 	}()
 
-	dbConn, err := postgres.Connect(&postgres.Config{LogQueries: envutil.GetenvBool("LOG_DB_QUERIES")})
+	dbConn, err := postgres.Connect(nil)
 	if err != nil {
 		logrus.Fatal(errors.Wrap(err, "Couldn't connect to the db"))
 	}
@@ -62,6 +62,7 @@ func main() {
 
 	c, err := twhelpcron.New(&twhelpcron.Config{
 		DB:        dbConn,
+		Queue:     q,
 		RunOnInit: envutil.GetenvBool("RUN_ON_INIT"),
 	})
 	if err != nil {

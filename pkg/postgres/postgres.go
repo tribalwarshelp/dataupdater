@@ -14,14 +14,13 @@ import (
 var log = logrus.WithField("package", "pkg/postgres")
 
 type Config struct {
-	LogQueries           bool
 	SkipDBInitialization bool
 }
 
 func Connect(cfg *Config) (*pg.DB, error) {
 	db := pg.Connect(prepareOptions())
 
-	if cfg != nil && cfg.LogQueries {
+	if envutil.GetenvBool("LOG_DB_QUERIES") {
 		db.AddQueryHook(querylogger.Logger{
 			Log:            log,
 			MaxQueryLength: 2000,
