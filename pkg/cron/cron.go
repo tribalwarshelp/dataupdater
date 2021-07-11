@@ -15,7 +15,7 @@ import (
 
 type Cron struct {
 	*cron.Cron
-	queue     queue.Queue
+	queue     *queue.Queue
 	db        *pg.DB
 	runOnInit bool
 	log       logrus.FieldLogger
@@ -165,7 +165,7 @@ func (c *Cron) logError(prefix string, taskName string, err error) {
 	)
 }
 
-func initializeQueue(cfg *Config) (queue.Queue, error) {
+func initializeQueue(cfg *Config) (*queue.Queue, error) {
 	q, err := queue.New(&queue.Config{
 		WorkerLimit: cfg.WorkerLimit,
 		Redis:       cfg.Redis,

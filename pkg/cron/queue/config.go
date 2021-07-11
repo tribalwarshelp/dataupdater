@@ -21,7 +21,7 @@ func validateConfig(cfg *Config) error {
 
 type registerTasksConfig struct {
 	DB    *pg.DB
-	Queue Queue
+	Queue *Queue
 }
 
 func validateRegisterTasksConfig(cfg *registerTasksConfig) error {

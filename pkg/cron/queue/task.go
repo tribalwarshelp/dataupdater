@@ -27,7 +27,7 @@ const (
 
 type task struct {
 	db              *pg.DB
-	queue           Queue
+	queue           *Queue
 	cachedLocations sync.Map
 }
 
