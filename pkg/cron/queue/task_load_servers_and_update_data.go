@@ -50,7 +50,7 @@ func (t *taskLoadServersAndUpdateData) execute(version *twmodel.Version) error {
 			VersionCode: version.Code,
 			Version:     version,
 		}
-		if err := postgres.CreateSchema(t.db, server); err != nil {
+		if err := postgres.CreateServerSchema(t.db, server); err != nil {
 			logrus.Warn(errors.Wrapf(err, "taskLoadServersAndUpdateData.execute: %s: Couldn't create the schema", server.Key))
 			continue
 		}

@@ -110,7 +110,7 @@ func prepareDB(db *pg.DB) error {
 	}
 
 	for _, server := range servers {
-		if err := createSchema(db, server, true); err != nil {
+		if err := createServerSchema(db, server, true); err != nil {
 			return err
 		}
 	}
@@ -118,11 +118,11 @@ func prepareDB(db *pg.DB) error {
 	return nil
 }
 
-func CreateSchema(db *pg.DB, server *twmodel.Server) error {
-	return createSchema(db, server, false)
+func CreateServerSchema(db *pg.DB, server *twmodel.Server) error {
+	return createServerSchema(db, server, false)
 }
 
-func SchemaExists(db *pg.DB, schemaName string) bool {
+func SchemaExists(db pg.DBI, schemaName string) bool {
 	exists, err := db.
 		Model().
 		Table("information_schema.schemata").
@@ -134,7 +134,7 @@ func SchemaExists(db *pg.DB, schemaName string) bool {
 	return exists
 }
 
-func createSchema(db *pg.DB, server *twmodel.Server, init bool) error {
+func createServerSchema(db *pg.DB, server *twmodel.Server, init bool) error {
 	if !init && SchemaExists(db, server.Key) {
 		return nil
 	}
@@ -145,7 +145,7 @@ func createSchema(db *pg.DB, server *twmodel.Server, init bool) error {
 	}
 	defer func() {
 		if err := tx.Close(); err != nil {
-			log.Warn(errors.Wrap(err, "createSchema: Couldn't rollback the transaction"))
+			log.Warn(errors.Wrap(err, "createServerSchema: Couldn't rollback the transaction"))
 		}
 	}()
 
