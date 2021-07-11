@@ -4,7 +4,7 @@ import (
 	"github.com/go-pg/pg/v10"
 	"github.com/pkg/errors"
 
-	"github.com/tribalwarshelp/cron/pkg/queue"
+	"github.com/tribalwarshelp/dataupdater/pkg/queue"
 )
 
 type Config struct {

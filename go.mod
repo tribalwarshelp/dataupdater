@@ -1,4 +1,4 @@
-module github.com/tribalwarshelp/cron
+module github.com/tribalwarshelp/dataupdater
 
 go 1.16
 

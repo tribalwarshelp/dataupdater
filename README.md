@@ -1,6 +1,6 @@
-# datafetcher
+# dataupdater
 
-- Adds automatically new servers.
+- Adds new servers automatically.
 - Fetches and updates server data (players, tribes, ODA, ODD, ODS, OD, conquers, configs).
 - Saves daily player/tribe stats, player/tribe history, tribe changes, player name changes, server stats.
 - Clears database from old player/tribe stats, player/tribe history.
