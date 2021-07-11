@@ -11,10 +11,13 @@ jobs:
       # with credentials stored in the UI
       - run: |
           docker login -u $DOCKER_LOGIN -p $DOCKER_PASSWORD
-      # build the application image
-      - run: docker build -t $DOCKER_LOGIN/twhelp-cron:latest .
-      # deploy the image
+      # build the cron image
+      - run: docker build -f cmd/cron/Dockerfile -t $DOCKER_LOGIN/twhelp-cron:latest .
+      # build the data updater image
+      - run: docker build -f cmd/dataupdater/Dockerfile -t $DOCKER_LOGIN/twhelp-dataupdater:latest .
+      # deploy the images
       - run: docker push $DOCKER_LOGIN/twhelp-cron:latest
+      - run: docker push $DOCKER_LOGIN/twhelp-dataupdater:latest
   build_version:
     docker:
       - image: circleci/golang:1.16
@@ -26,10 +29,13 @@ jobs:
       # with credentials stored in the UI
       - run: |
           docker login -u $DOCKER_LOGIN -p $DOCKER_PASSWORD
-      # build the application image
-      - run: docker build -t $DOCKER_LOGIN/twhelp-cron:$(echo $CIRCLE_TAG | sed -r 's/^.{1}//') .
-      # deploy the image
+      # build the cron image
+      - run: docker build -f cmd/cron/Dockerfile -t $DOCKER_LOGIN/twhelp-cron:$(echo $CIRCLE_TAG | sed -r 's/^.{1}//') .
+      # build the data updater image
+      - run: docker build -f cmd/dataupdater/Dockerfile -t $DOCKER_LOGIN/twhelp-dataupdater:$(echo $CIRCLE_TAG | sed -r 's/^.{1}//') .
+      # deploy the images
       - run: docker push $DOCKER_LOGIN/twhelp-cron:$(echo $CIRCLE_TAG | sed -r 's/^.{1}//')
+      - run: docker push $DOCKER_LOGIN/twhelp-dataupdater::$(echo $CIRCLE_TAG | sed -r 's/^.{1}//')
 workflows:
   version: 2
   deploy_latest:
