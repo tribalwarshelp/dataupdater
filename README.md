@@ -1,4 +1,4 @@
-# tribalwarshelp.com cron
+# datafetcher
 
 - Adds automatically new servers.
 - Fetches and updates server data (players, tribes, ODA, ODD, ODS, OD, conquers, configs).
@@ -40,9 +40,13 @@ git clone git@github.com:tribalwarshelp/cron.git
 ```
 2. Open the folder with this project in a terminal.
 3. Set the required env variables directly in your system or create .env.local file.
-4. Run the app.
+4. Run the cron.
 ```
-go run main.go
+go run ./cmd/cron/main.go
+```
+5. Run the data updater in a new tab.
+```
+go run ./cmd/dataupdater/main.go
 ```
 
 ## License
