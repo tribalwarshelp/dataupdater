@@ -11,32 +11,32 @@ const (
 	day = 24 * time.Hour
 )
 
-type taskVacuumServerDB struct {
+type taskVacuumServerData struct {
 	*task
 }
 
-func (t *taskVacuumServerDB) execute(server *twmodel.Server) error {
+func (t *taskVacuumServerData) execute(server *twmodel.Server) error {
 	if err := t.validatePayload(server); err != nil {
-		log.Debug(errors.Wrap(err, "taskVacuumServerDB.execute"))
+		log.Debug(errors.Wrap(err, "taskVacuumServerData.execute"))
 		return nil
 	}
 	entry := log.WithField("key", server.Key)
-	entry.Infof("taskVacuumServerDB.execute: %s: Vacumming the database...", server.Key)
+	entry.Infof("taskVacuumServerData.execute: %s: Vacumming the database...", server.Key)
 	err := (&workerVacuumServerDB{
 		db:     t.db.WithParam("SERVER", pg.Safe(server.Key)),
 		server: server,
 	}).vacuum()
 	if err != nil {
-		err = errors.Wrap(err, "taskVacuumServerDB.execute")
+		err = errors.Wrap(err, "taskVacuumServerData.execute")
 		entry.Error(err)
 		return err
 	}
-	entry.Infof("taskVacuumServerDB.execute: %s: The database has been vacummed", server.Key)
+	entry.Infof("taskVacuumServerData.execute: %s: The database has been vacummed", server.Key)
 
 	return nil
 }
 
-func (t *taskVacuumServerDB) validatePayload(server *twmodel.Server) error {
+func (t *taskVacuumServerData) validatePayload(server *twmodel.Server) error {
 	if server == nil {
 		return errors.New("expected *twmodel.Server, got nil")
 	}

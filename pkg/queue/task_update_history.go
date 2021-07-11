@@ -41,7 +41,7 @@ func (t *taskUpdateHistory) execute(timezone string) error {
 		WithField("numberOfServers", len(servers)).
 		Info("taskUpdateHistory.execute: Update of the history has started")
 	for _, server := range servers {
-		err := t.queue.Add(Main, GetTask(UpdateServerHistory).WithArgs(context.Background(), timezone, server))
+		err := t.queue.Add(GetTask(UpdateServerHistory).WithArgs(context.Background(), timezone, server))
 		if err != nil {
 			log.
 				WithField("key", server.Key).

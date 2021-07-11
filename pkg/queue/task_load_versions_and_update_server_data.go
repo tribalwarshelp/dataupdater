@@ -20,7 +20,7 @@ func (t *taskLoadVersionsAndUpdateServerData) execute() error {
 	}
 	log.Debug("taskLoadVersionsAndUpdateServerData.execute: Versions have been loaded")
 	for _, version := range versions {
-		err := t.queue.Add(Main, GetTask(LoadServersAndUpdateData).WithArgs(context.Background(), version))
+		err := t.queue.Add(GetTask(LoadServersAndUpdateData).WithArgs(context.Background(), version))
 		if err != nil {
 			log.
 				WithField("code", version.Code).

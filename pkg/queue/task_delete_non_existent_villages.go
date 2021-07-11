@@ -29,7 +29,6 @@ func (t *taskDeleteNonExistentVillages) execute() error {
 		Info("taskDeleteNonExistentVillages.execute: Servers have been loaded and added to the queue")
 	for _, server := range servers {
 		err := t.queue.Add(
-			Main,
 			GetTask(ServerDeleteNonExistentVillages).
 				WithArgs(
 					context.Background(),

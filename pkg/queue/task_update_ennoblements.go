@@ -26,7 +26,6 @@ func (t *taskUpdateEnnoblements) execute() error {
 	log.WithField("numberOfServers", len(servers)).Info("taskUpdateEnnoblements.execute: Update of the ennoblements has started...")
 	for _, server := range servers {
 		err := t.queue.Add(
-			Ennoblements,
 			GetTask(UpdateServerEnnoblements).
 				WithArgs(context.Background(), twurlbuilder.BuildServerURL(server.Key, server.Version.Host), server),
 		)

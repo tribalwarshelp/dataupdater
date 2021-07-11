@@ -11,24 +11,26 @@ import (
 	"github.com/tribalwarshelp/shared/tw/twmodel"
 )
 
-var log = logrus.WithField("package", "internal/postgres")
+var log = logrus.WithField("package", "pkg/postgres")
 
 type Config struct {
-	LogQueries bool
+	SkipDBInitialization bool
 }
 
 func Connect(cfg *Config) (*pg.DB, error) {
 	db := pg.Connect(prepareOptions())
 
-	if cfg != nil && cfg.LogQueries {
+	if envutil.GetenvBool("LOG_DB_QUERIES") {
 		db.AddQueryHook(querylogger.Logger{
 			Log:            log,
 			MaxQueryLength: 2000,
 		})
 	}
 
-	if err := prepareDB(db); err != nil {
-		return nil, err
+	if cfg == nil || !cfg.SkipDBInitialization {
+		if err := prepareDB(db); err != nil {
+			return nil, err
+		}
 	}
 
 	return db, nil
@@ -110,7 +112,7 @@ func prepareDB(db *pg.DB) error {
 	}
 
 	for _, server := range servers {
-		if err := createSchema(db, server, true); err != nil {
+		if err := createServerSchema(db, server, true); err != nil {
 			return err
 		}
 	}
@@ -118,11 +120,11 @@ func prepareDB(db *pg.DB) error {
 	return nil
 }
 
-func CreateSchema(db *pg.DB, server *twmodel.Server) error {
-	return createSchema(db, server, false)
+func CreateServerSchema(db *pg.DB, server *twmodel.Server) error {
+	return createServerSchema(db, server, false)
 }
 
-func SchemaExists(db *pg.DB, schemaName string) bool {
+func SchemaExists(db pg.DBI, schemaName string) bool {
 	exists, err := db.
 		Model().
 		Table("information_schema.schemata").
@@ -134,7 +136,7 @@ func SchemaExists(db *pg.DB, schemaName string) bool {
 	return exists
 }
 
-func createSchema(db *pg.DB, server *twmodel.Server, init bool) error {
+func createServerSchema(db *pg.DB, server *twmodel.Server, init bool) error {
 	if !init && SchemaExists(db, server.Key) {
 		return nil
 	}
@@ -145,7 +147,7 @@ func createSchema(db *pg.DB, server *twmodel.Server, init bool) error {
 	}
 	defer func() {
 		if err := tx.Close(); err != nil {
-			log.Warn(errors.Wrap(err, "createSchema: Couldn't rollback the transaction"))
+			log.Warn(errors.Wrap(err, "createServerSchema: Couldn't rollback the transaction"))
 		}
 	}()
 

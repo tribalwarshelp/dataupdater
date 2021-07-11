@@ -8,7 +8,7 @@ import (
 	"github.com/tribalwarshelp/shared/tw/twdataloader"
 	"github.com/tribalwarshelp/shared/tw/twmodel"
 
-	"github.com/tribalwarshelp/cron/internal/postgres"
+	"github.com/tribalwarshelp/cron/pkg/postgres"
 )
 
 type taskLoadServersAndUpdateData struct {
@@ -50,7 +50,7 @@ func (t *taskLoadServersAndUpdateData) execute(version *twmodel.Version) error {
 			VersionCode: version.Code,
 			Version:     version,
 		}
-		if err := postgres.CreateSchema(t.db, server); err != nil {
+		if err := postgres.CreateServerSchema(t.db, server); err != nil {
 			logrus.Warn(errors.Wrapf(err, "taskLoadServersAndUpdateData.execute: %s: Couldn't create the schema", server.Key))
 			continue
 		}
@@ -85,7 +85,7 @@ func (t *taskLoadServersAndUpdateData) execute(version *twmodel.Version) error {
 
 	entry.Infof("%s: Servers have been loaded", version.Host)
 	for _, server := range servers {
-		err := t.queue.Add(Main, GetTask(UpdateServerData).WithArgs(context.Background(), server.url, server.Server))
+		err := t.queue.Add(GetTask(UpdateServerData).WithArgs(context.Background(), server.url, server.Server))
 		if err != nil {
 			log.
 				WithField("key", server.Key).
