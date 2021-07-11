@@ -14,7 +14,8 @@ import (
 var log = logrus.WithField("package", "pkg/postgres")
 
 type Config struct {
-	LogQueries bool
+	LogQueries           bool
+	SkipDBInitialization bool
 }
 
 func Connect(cfg *Config) (*pg.DB, error) {
@@ -27,8 +28,10 @@ func Connect(cfg *Config) (*pg.DB, error) {
 		})
 	}
 
-	if err := prepareDB(db); err != nil {
-		return nil, err
+	if cfg == nil || !cfg.SkipDBInitialization {
+		if err := prepareDB(db); err != nil {
+			return nil, err
+		}
 	}
 
 	return db, nil

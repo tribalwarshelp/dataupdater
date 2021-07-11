@@ -11,7 +11,7 @@ import (
 	"github.com/vmihailenco/taskq/v3/redisq"
 )
 
-var log = logrus.WithField("package", "pkg/cron/queue")
+var log = logrus.WithField("package", "pkg/queue")
 
 type Queue struct {
 	redis        redis.UniversalClient
