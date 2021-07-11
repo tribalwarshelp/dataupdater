@@ -16,7 +16,7 @@ const (
 	Ennoblements = "ennoblements"
 )
 
-var log = logrus.WithField("package", "internal/cron/queue")
+var log = logrus.WithField("package", "pkg/cron/queue")
 
 type Queue interface {
 	Start(ctx context.Context) error

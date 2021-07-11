@@ -10,7 +10,7 @@ import (
 
 	"github.com/robfig/cron/v3"
 
-	"github.com/tribalwarshelp/cron/internal/cron/queue"
+	"github.com/tribalwarshelp/cron/pkg/cron/queue"
 )
 
 type Cron struct {
@@ -29,7 +29,7 @@ func New(cfg *Config) (*Cron, error) {
 	if err != nil {
 		return nil, err
 	}
-	log := logrus.WithField("package", "internal/cron")
+	log := logrus.WithField("package", "pkg/cron")
 	c := &Cron{
 		Cron: cron.New(cron.WithChain(
 			cron.SkipIfStillRunning(

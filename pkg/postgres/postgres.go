@@ -11,7 +11,7 @@ import (
 	"github.com/tribalwarshelp/shared/tw/twmodel"
 )
 
-var log = logrus.WithField("package", "internal/postgres")
+var log = logrus.WithField("package", "pkg/postgres")
 
 type Config struct {
 	LogQueries bool

@@ -13,8 +13,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	twhelpcron "github.com/tribalwarshelp/cron/internal/cron"
-	"github.com/tribalwarshelp/cron/internal/postgres"
+	twhelpcron "github.com/tribalwarshelp/cron/pkg/cron"
+	"github.com/tribalwarshelp/cron/pkg/postgres"
 
 	"github.com/joho/godotenv"
 )

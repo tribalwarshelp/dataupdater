@@ -8,7 +8,7 @@ import (
 	"github.com/tribalwarshelp/shared/tw/twdataloader"
 	"github.com/tribalwarshelp/shared/tw/twmodel"
 
-	"github.com/tribalwarshelp/cron/internal/postgres"
+	"github.com/tribalwarshelp/cron/pkg/postgres"
 )
 
 type taskLoadServersAndUpdateData struct {
