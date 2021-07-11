@@ -41,11 +41,10 @@ func (q *Queue) init(cfg *Config) error {
 	q.main = q.registerQueue("main", cfg.WorkerLimit)
 	q.ennoblements = q.registerQueue("ennoblements", cfg.WorkerLimit)
 
-	err := registerTasks(&registerTasksConfig{
+	if err := registerTasks(&registerTasksConfig{
 		DB:    cfg.DB,
 		Queue: q,
-	})
-	if err != nil {
+	}); err != nil {
 		return errors.Wrapf(err, "couldn't register tasks")
 	}
 

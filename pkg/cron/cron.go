@@ -25,10 +25,6 @@ func New(cfg *Config) (*Cron, error) {
 	if err := validateConfig(cfg); err != nil {
 		return nil, err
 	}
-	q, err := initializeQueue(cfg)
-	if err != nil {
-		return nil, err
-	}
 	log := logrus.WithField("package", "pkg/cron")
 	c := &Cron{
 		Cron: cron.New(cron.WithChain(
@@ -36,7 +32,7 @@ func New(cfg *Config) (*Cron, error) {
 				cron.PrintfLogger(log),
 			),
 		)),
-		queue:     q,
+		queue:     cfg.Queue,
 		db:        cfg.DB,
 		runOnInit: cfg.RunOnInit,
 		log:       log,
@@ -96,19 +92,13 @@ func (c *Cron) init() error {
 	return nil
 }
 
-func (c *Cron) Start(ctx context.Context) error {
-	if err := c.queue.Start(ctx); err != nil {
-		return err
-	}
+func (c *Cron) Start() error {
 	c.Cron.Start()
 	return nil
 }
 
 func (c *Cron) Stop() error {
 	c.Cron.Stop()
-	if err := c.queue.Close(); err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -163,15 +153,6 @@ func (c *Cron) logError(prefix string, taskName string, err error) {
 			taskName,
 		),
 	)
-}
-
-func initializeQueue(cfg *Config) (*queue.Queue, error) {
-	q, err := queue.New(&queue.Config{
-		WorkerLimit: cfg.WorkerLimit,
-		Redis:       cfg.Redis,
-		DB:          cfg.DB,
-	})
-	return q, errors.Wrap(err, "couldn't initialize a queue")
 }
 
 func createFnWithTimezone(timezone string, fn func(timezone string)) func() {

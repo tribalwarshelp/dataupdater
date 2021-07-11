@@ -15,6 +15,7 @@ import (
 
 	twhelpcron "github.com/tribalwarshelp/cron/pkg/cron"
 	"github.com/tribalwarshelp/cron/pkg/postgres"
+	"github.com/tribalwarshelp/cron/pkg/queue"
 
 	"github.com/joho/godotenv"
 )
@@ -47,18 +48,29 @@ func main() {
 		}
 	}()
 
-	c, err := twhelpcron.New(&twhelpcron.Config{
+	q, err := queue.New(&queue.Config{
 		DB:          dbConn,
-		RunOnInit:   envutil.GetenvBool("RUN_ON_INIT"),
 		Redis:       redisClient,
 		WorkerLimit: envutil.GetenvInt("WORKER_LIMIT"),
 	})
 	if err != nil {
+		logrus.Fatal(errors.Wrap(err, "Couldn't initialize a queue"))
+	}
+	if err := q.Start(context.Background()); err != nil {
+		logrus.Fatal(errors.Wrap(err, "Couldn't start the queue"))
+	}
+
+	c, err := twhelpcron.New(&twhelpcron.Config{
+		DB:        dbConn,
+		RunOnInit: envutil.GetenvBool("RUN_ON_INIT"),
+	})
+	if err != nil {
 		logrus.Fatal(errors.Wrap(err, "Couldn't initialize a cron instance"))
 	}
-	if err := c.Start(context.Background()); err != nil {
+	if err := c.Start(); err != nil {
 		logrus.Fatal(errors.Wrap(err, "Couldn't start the cron"))
 	}
+	defer c.Stop()
 
 	logrus.Info("Cron is up and running!")
 
@@ -67,7 +79,7 @@ func main() {
 	<-channel
 
 	logrus.Info("shutting down")
-	if err := c.Stop(); err != nil {
+	if err := q.Close(); err != nil {
 		logrus.Fatal(err)
 	}
 }
