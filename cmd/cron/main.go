@@ -8,10 +8,10 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/tribalwarshelp/cron/cmd/internal"
-	twhelpcron "github.com/tribalwarshelp/cron/pkg/cron"
-	"github.com/tribalwarshelp/cron/pkg/postgres"
-	"github.com/tribalwarshelp/cron/pkg/queue"
+	"github.com/tribalwarshelp/dataupdater/cmd/internal"
+	twhelpcron "github.com/tribalwarshelp/dataupdater/pkg/cron"
+	"github.com/tribalwarshelp/dataupdater/pkg/postgres"
+	"github.com/tribalwarshelp/dataupdater/pkg/queue"
 )
 
 func main() {

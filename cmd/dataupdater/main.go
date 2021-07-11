@@ -9,9 +9,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/tribalwarshelp/cron/cmd/internal"
-	"github.com/tribalwarshelp/cron/pkg/postgres"
-	"github.com/tribalwarshelp/cron/pkg/queue"
+	"github.com/tribalwarshelp/dataupdater/cmd/internal"
+	"github.com/tribalwarshelp/dataupdater/pkg/postgres"
+	"github.com/tribalwarshelp/dataupdater/pkg/queue"
 )
 
 func main() {
