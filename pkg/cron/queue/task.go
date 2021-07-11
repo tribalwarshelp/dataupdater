@@ -13,7 +13,7 @@ const (
 	LoadServersAndUpdateData        = "loadServersAndUpdateData"
 	UpdateServerData                = "updateServerData"
 	Vacuum                          = "vacuum"
-	VacuumServerDB                  = "vacuumServerDB"
+	VacuumServerData                = "vacuumServerData"
 	UpdateEnnoblements              = "updateEnnoblements"
 	UpdateServerEnnoblements        = "updateServerEnnoblements"
 	UpdateHistory                   = "updateHistory"
@@ -71,8 +71,8 @@ func registerTasks(cfg *registerTasksConfig) error {
 			Handler: (&taskVacuum{t}).execute,
 		},
 		{
-			Name:    VacuumServerDB,
-			Handler: (&taskVacuumServerDB{t}).execute,
+			Name:    VacuumServerData,
+			Handler: (&taskVacuumServerData{t}).execute,
 		},
 		{
 			Name:    UpdateEnnoblements,

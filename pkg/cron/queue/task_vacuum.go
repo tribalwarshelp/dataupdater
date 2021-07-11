@@ -22,7 +22,7 @@ func (t *taskVacuum) execute() error {
 	}
 	log.Infof("taskVacuum.execute: The database vacumming process has started...")
 	for _, server := range servers {
-		err := t.queue.Add(Main, GetTask(VacuumServerDB).WithArgs(context.Background(), server))
+		err := t.queue.Add(GetTask(VacuumServerData).WithArgs(context.Background(), server))
 		if err != nil {
 			log.
 				WithField("key", server.Key).

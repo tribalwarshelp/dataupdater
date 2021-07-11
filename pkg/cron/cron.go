@@ -113,42 +113,42 @@ func (c *Cron) Stop() error {
 }
 
 func (c *Cron) updateServerData() {
-	err := c.queue.Add(queue.Main, queue.GetTask(queue.LoadVersionsAndUpdateServerData).WithArgs(context.Background()))
+	err := c.queue.Add(queue.GetTask(queue.LoadVersionsAndUpdateServerData).WithArgs(context.Background()))
 	if err != nil {
 		c.logError("Cron.updateServerData", queue.LoadVersionsAndUpdateServerData, err)
 	}
 }
 
 func (c *Cron) updateEnnoblements() {
-	err := c.queue.Add(queue.Ennoblements, queue.GetTask(queue.UpdateEnnoblements).WithArgs(context.Background()))
+	err := c.queue.Add(queue.GetTask(queue.UpdateEnnoblements).WithArgs(context.Background()))
 	if err != nil {
 		c.logError("Cron.updateEnnoblements", queue.UpdateEnnoblements, err)
 	}
 }
 
 func (c *Cron) updateHistory(timezone string) {
-	err := c.queue.Add(queue.Main, queue.GetTask(queue.UpdateHistory).WithArgs(context.Background(), timezone))
+	err := c.queue.Add(queue.GetTask(queue.UpdateHistory).WithArgs(context.Background(), timezone))
 	if err != nil {
 		c.logError("Cron.updateHistory", queue.UpdateHistory, err)
 	}
 }
 
 func (c *Cron) updateStats(timezone string) {
-	err := c.queue.Add(queue.Main, queue.GetTask(queue.UpdateStats).WithArgs(context.Background(), timezone))
+	err := c.queue.Add(queue.GetTask(queue.UpdateStats).WithArgs(context.Background(), timezone))
 	if err != nil {
 		c.logError("Cron.updateStats", queue.UpdateStats, err)
 	}
 }
 
 func (c *Cron) vacuumDatabase() {
-	err := c.queue.Add(queue.Main, queue.GetTask(queue.Vacuum).WithArgs(context.Background()))
+	err := c.queue.Add(queue.GetTask(queue.Vacuum).WithArgs(context.Background()))
 	if err != nil {
 		c.logError("Cron.vacuumDatabase", queue.Vacuum, err)
 	}
 }
 
 func (c *Cron) deleteNonExistentVillages() {
-	err := c.queue.Add(queue.Main, queue.GetTask(queue.DeleteNonExistentVillages).WithArgs(context.Background()))
+	err := c.queue.Add(queue.GetTask(queue.DeleteNonExistentVillages).WithArgs(context.Background()))
 	if err != nil {
 		c.logError("Cron.deleteNonExistentVillages", queue.DeleteNonExistentVillages, err)
 	}

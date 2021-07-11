@@ -11,17 +11,12 @@ import (
 	"github.com/vmihailenco/taskq/v3/redisq"
 )
 
-const (
-	Main         = "main"
-	Ennoblements = "ennoblements"
-)
-
 var log = logrus.WithField("package", "pkg/cron/queue")
 
 type Queue interface {
 	Start(ctx context.Context) error
 	Close() error
-	Add(name string, msg *taskq.Message) error
+	Add(msg *taskq.Message) error
 }
 
 type queue struct {
@@ -49,8 +44,8 @@ func New(cfg *Config) (Queue, error) {
 
 func (q *queue) init(cfg *Config) error {
 	q.factory = redisq.NewFactory()
-	q.main = q.registerQueue(Main, cfg.WorkerLimit)
-	q.ennoblements = q.registerQueue(Ennoblements, cfg.WorkerLimit)
+	q.main = q.registerQueue("main", cfg.WorkerLimit)
+	q.ennoblements = q.registerQueue("ennoblements", cfg.WorkerLimit)
 
 	err := registerTasks(&registerTasksConfig{
 		DB:    cfg.DB,
@@ -73,11 +68,22 @@ func (q *queue) registerQueue(name string, limit int) taskq.Queue {
 	})
 }
 
-func (q *queue) getQueueByName(name string) taskq.Queue {
+func (q *queue) getQueueByTaskName(name string) taskq.Queue {
 	switch name {
-	case Main:
+	case LoadVersionsAndUpdateServerData,
+		LoadServersAndUpdateData,
+		UpdateServerData,
+		Vacuum,
+		VacuumServerData,
+		UpdateHistory,
+		UpdateServerHistory,
+		UpdateStats,
+		UpdateServerStats,
+		DeleteNonExistentVillages,
+		ServerDeleteNonExistentVillages:
 		return q.main
-	case Ennoblements:
+	case UpdateEnnoblements,
+		UpdateServerEnnoblements:
 		return q.ennoblements
 	}
 	return nil
@@ -97,10 +103,10 @@ func (q *queue) Close() error {
 	return nil
 }
 
-func (q *queue) Add(name string, msg *taskq.Message) error {
-	queue := q.getQueueByName(name)
+func (q *queue) Add(msg *taskq.Message) error {
+	queue := q.getQueueByTaskName(msg.TaskName)
 	if queue == nil {
-		return errors.Errorf("couldn't add the message to the queue: unknown queue name '%s'", name)
+		return errors.Errorf("couldn't add the message to the queue: unknown task name '%s'", msg.TaskName)
 	}
 	if err := queue.Add(msg); err != nil {
 		return errors.Wrap(err, "couldn't add the message to the queue")
