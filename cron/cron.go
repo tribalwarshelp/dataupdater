@@ -10,7 +10,7 @@ import (
 
 	"github.com/robfig/cron/v3"
 
-	"github.com/tribalwarshelp/dataupdater/pkg/queue"
+	"github.com/tribalwarshelp/dataupdater/queue"
 )
 
 type Cron struct {

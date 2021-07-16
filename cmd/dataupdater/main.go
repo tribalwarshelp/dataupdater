@@ -10,8 +10,8 @@ import (
 	"syscall"
 
 	"github.com/tribalwarshelp/dataupdater/cmd/internal"
-	"github.com/tribalwarshelp/dataupdater/pkg/postgres"
-	"github.com/tribalwarshelp/dataupdater/pkg/queue"
+	"github.com/tribalwarshelp/dataupdater/postgres"
+	"github.com/tribalwarshelp/dataupdater/queue"
 )
 
 func main() {
