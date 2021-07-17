@@ -52,7 +52,7 @@ func (t *taskUpdateServerData) validatePayload(server *twmodel.Server) error {
 
 type workerUpdateServerData struct {
 	db         *pg.DB
-	dataloader twdataloader.ServerDataLoader
+	dataloader *twdataloader.ServerDataLoader
 	server     *twmodel.Server
 }
 

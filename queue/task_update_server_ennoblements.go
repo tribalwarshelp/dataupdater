@@ -42,7 +42,7 @@ func (t *taskUpdateServerEnnoblements) validatePayload(server *twmodel.Server) e
 
 type workerUpdateServerEnnoblements struct {
 	db         *pg.DB
-	dataloader twdataloader.ServerDataLoader
+	dataloader *twdataloader.ServerDataLoader
 }
 
 func (w *workerUpdateServerEnnoblements) loadEnnoblements() ([]*twmodel.Ennoblement, error) {
