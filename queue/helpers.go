@@ -38,7 +38,7 @@ func newHTTPClient() *http.Client {
 	}
 }
 
-func newServerDataLoader(url string) twdataloader.ServerDataLoader {
+func newServerDataLoader(url string) *twdataloader.ServerDataLoader {
 	return twdataloader.NewServerDataLoader(&twdataloader.ServerDataLoaderConfig{
 		BaseURL: url,
 		Client:  newHTTPClient(),

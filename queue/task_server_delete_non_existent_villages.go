@@ -42,7 +42,7 @@ func (t *taskServerDeleteNonExistentVillages) validatePayload(server *twmodel.Se
 
 type workerDeleteNonExistentVillages struct {
 	db         *pg.DB
-	dataloader twdataloader.ServerDataLoader
+	dataloader *twdataloader.ServerDataLoader
 	server     *twmodel.Server
 }
 
