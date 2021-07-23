@@ -39,6 +39,8 @@ github.com/go-gl/glfw/v3.3/glfw v0.0.0-20200222043503-6f7a984d4dc4/go.mod h1:tQ2
 github.com/go-pg/pg/v10 v10.9.1/go.mod h1:rgmTPgHgl5EN2CNKKoMwC7QT62t8BqsdpEkUQuiZMQs=
 github.com/go-pg/pg/v10 v10.10.2 h1:8G2DdKrB3/0nRIlpur0HySEWBJnHYUByiC0ko4XzE8w=
 github.com/go-pg/pg/v10 v10.10.2/go.mod h1:EmoJGYErc+stNN/1Jf+o4csXuprjxcRztBnn6cHe38E=
+github.com/go-pg/pg/v10 v10.10.3 h1:WobSfk5I+v7XwD1h9x2B7n4slDzjdBIonJ5PID95Aag=
+github.com/go-pg/pg/v10 v10.10.3/go.mod h1:EmoJGYErc+stNN/1Jf+o4csXuprjxcRztBnn6cHe38E=
 github.com/go-pg/zerochecker v0.2.0 h1:pp7f72c3DobMWOb2ErtZsnrPaSvHd2W4o9//8HtF4mU=
 github.com/go-pg/zerochecker v0.2.0/go.mod h1:NJZ4wKL0NmTtz0GKCoJ8kym6Xn/EQzXRl2OnAe7MmDo=
 github.com/go-redis/redis/v8 v8.1.0/go.mod h1:isLoQT/NFSP7V67lyvM9GmdvLdyZ7pEhsXvvyQtnQTo=
@@ -132,6 +134,8 @@ github.com/tribalwarshelp/shared v0.0.0-20210717092847-e9473847ca71 h1:FdjS953EP
 github.com/tribalwarshelp/shared v0.0.0-20210717092847-e9473847ca71/go.mod h1:6xooIU27fjagr/KVBPayktW4gn9ylTdBPGgxlQ6+x9s=
 github.com/tribalwarshelp/shared v0.0.0-20210717094429-6efa1a4f614c h1:dgWoORgR3COUbO0Dhho+fB1axhsKGXadaxeCiw9APFA=
 github.com/tribalwarshelp/shared v0.0.0-20210717094429-6efa1a4f614c/go.mod h1:6xooIU27fjagr/KVBPayktW4gn9ylTdBPGgxlQ6+x9s=
+github.com/tribalwarshelp/shared v0.0.0-20210723104616-9fe0aafafeb6 h1:QkMH4eQXHs8Q4fT1hXgEAun4F679c4rErBWvhD0pGTM=
+github.com/tribalwarshelp/shared v0.0.0-20210723104616-9fe0aafafeb6/go.mod h1:J3UEkw7lgTWFxOIp+fqCImeQBOyyXMFAfXYSHhEILys=
 github.com/vmihailenco/bufpool v0.1.11 h1:gOq2WmBrq0i2yW5QJ16ykccQ4wH9UyEsgLm6czKAd94=
 github.com/vmihailenco/bufpool v0.1.11/go.mod h1:AFf/MOy3l2CFTKbxwt0mp2MwnqjNEs5H/UxrkA5jxTQ=
 github.com/vmihailenco/msgpack/v5 v5.0.0/go.mod h1:HVxBVPUK/+fZMonk4bi1islLa8V3cfnBug0+4dykPzo=
