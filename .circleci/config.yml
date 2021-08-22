@@ -35,7 +35,7 @@ jobs:
       - run: docker build -f cmd/dataupdater/Dockerfile -t $DOCKER_LOGIN/twhelp-dataupdater:$(echo $CIRCLE_TAG | sed -r 's/^.{1}//') .
       # deploy the images
       - run: docker push $DOCKER_LOGIN/twhelp-cron:$(echo $CIRCLE_TAG | sed -r 's/^.{1}//')
-      - run: docker push $DOCKER_LOGIN/twhelp-dataupdater::$(echo $CIRCLE_TAG | sed -r 's/^.{1}//')
+      - run: docker push $DOCKER_LOGIN/twhelp-dataupdater:$(echo $CIRCLE_TAG | sed -r 's/^.{1}//')
 workflows:
   version: 2
   deploy_latest:
