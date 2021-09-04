@@ -14,7 +14,7 @@ require (
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/sirupsen/logrus v1.8.1
 	github.com/tribalwarshelp/shared v0.0.0-20210825131936-340bd352f411
-	github.com/vmihailenco/taskq/v3 v3.2.4
+	github.com/vmihailenco/taskq/v3 v3.2.5
 )
 
 require (
