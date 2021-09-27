@@ -3,7 +3,7 @@ module github.com/tribalwarshelp/dataupdater
 go 1.17
 
 require (
-	github.com/Kichiyaki/appmode v1.0.0
+	github.com/Kichiyaki/appmode v1.0.1
 	github.com/Kichiyaki/go-pg-logrus-query-logger/v10 v10.0.0-20210822140425-1724064d6e5c
 	github.com/Kichiyaki/goutil v0.1.0
 	github.com/go-pg/pg/v10 v10.10.6
