@@ -17,7 +17,7 @@ RUN go build -o twcron ./cmd/cron
 ######## Start a new stage from scratch #######
 FROM alpine:latest
 
-RUN apk --no-cache add ca-certificates
+RUN apk --no-cache add ca-certificates tzdata
 
 WORKDIR /root/
 
@@ -26,7 +26,5 @@ COPY --from=builder /app/twcron .
 
 ENV APP_MODE=production
 EXPOSE 8080
-
-RUN apk add --no-cache tzdata
 
 CMD ./twcron
