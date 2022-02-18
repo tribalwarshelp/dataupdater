@@ -13,7 +13,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/sirupsen/logrus v1.8.1
-	github.com/tribalwarshelp/shared v0.0.0-20210924044719-a52277d8a5e0
+	github.com/tribalwarshelp/shared v0.0.0-20220218101729-f4cb4c1f2026
 	github.com/vmihailenco/taskq/v3 v3.2.8
 )
 
