@@ -7,7 +7,7 @@ require (
 	github.com/Kichiyaki/go-pg-logrus-query-logger/v10 v10.0.0-20210822140425-1724064d6e5c
 	github.com/Kichiyaki/goutil v0.1.0
 	github.com/go-pg/pg/v10 v10.10.6
-	github.com/go-redis/redis/v8 v8.11.4
+	github.com/go-redis/redis/v8 v8.11.5
 	github.com/go-redis/redis_rate/v9 v9.1.2 // indirect
 	github.com/joho/godotenv v1.4.0
 	github.com/pkg/errors v0.9.1
@@ -36,6 +36,6 @@ require (
 	github.com/vmihailenco/tagparser v0.1.2 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519 // indirect
-	golang.org/x/sys v0.0.0-20210923061019-b8560ed6a9b7 // indirect
+	golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e // indirect
 	mellium.im/sasl v0.2.1 // indirect
 )
